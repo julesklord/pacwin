@@ -1,26 +1,61 @@
 # ============================================================
 #  pacwin.psm1  —  Universal Package Layer for Windows
 #  Abstraction over: winget | chocolatey | scoop
+#  Compatible: PowerShell 5.1 + PowerShell 7+
 # ============================================================
 
-#region ── Helpers & Detection ─────────────────────────────
+Set-StrictMode -Off
+$ErrorActionPreference = "SilentlyContinue"
 
-function _pw_color { param([string]$text, [string]$color = "White"); Write-Host $text -ForegroundColor $color }
+#region ── Helpers ──────────────────────────────────────────
+
+function _pw_color {
+    param(
+        [string]$text,
+        [string]$color    = "White",
+        [switch]$NoNewline
+    )
+    if ($NoNewline) {
+        Write-Host $text -ForegroundColor $color -NoNewline
+    } else {
+        Write-Host $text -ForegroundColor $color
+    }
+}
 
 function _pw_header {
     _pw_color ""
     _pw_color "  ╔══════════════════════════════════════╗" Cyan
-    _pw_color "  ║  pacwin  —  universal package layer  ║" Cyan
+    _pw_color "  ║   pacwin  —  universal pkg layer     ║" Cyan
     _pw_color "  ╚══════════════════════════════════════╝" Cyan
     _pw_color ""
 }
 
+function _pw_sep { _pw_color ("  " + ("─" * 68)) DarkGray }
+
+# Resuelve ruta absoluta del ejecutable — necesario para jobs PS5.1
+# que no heredan PATH del proceso padre
+function _pw_exe {
+    param([string]$name)
+    $cmd = Get-Command $name -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    return $null
+}
+
+
+#endregion
+
+#region ── Manager Detection ────────────────────────────────
+
 function _pw_detect_managers {
-    $managers = [ordered]@{}
-    if (Get-Command winget -ErrorAction SilentlyContinue) { $managers["winget"] = $true }
-    if (Get-Command choco -ErrorAction SilentlyContinue)  { $managers["choco"]  = $true }
-    if (Get-Command scoop -ErrorAction SilentlyContinue)  { $managers["scoop"]  = $true }
-    return $managers
+    $m = [ordered]@{}
+    # Guardamos la ruta del exe, no solo $true — los jobs necesitan la ruta
+    $wingetExe = _pw_exe "winget"
+    $chocoExe  = _pw_exe "choco"
+    $scoopExe  = _pw_exe "scoop"
+    if ($wingetExe) { $m["winget"] = $wingetExe }
+    if ($chocoExe)  { $m["choco"]  = $chocoExe  }
+    if ($scoopExe)  { $m["scoop"]  = $scoopExe  }
+    return $m
 }
 
 function _pw_assert_managers {
@@ -35,133 +70,264 @@ function _pw_assert_managers {
 
 #endregion
 
-#region ── Search Engine ────────────────────────────────────
+#region ── Parsers (síncronos, sin jobs) ────────────────────
 
-function _pw_search_winget {
-    param([string]$query)
-    $results = @()
-    try {
-        $raw = winget search --query $query --accept-source-agreements 2>$null |
-               Select-String -Pattern "^\S" |
-               Where-Object { $_ -notmatch "^Name|^-{3,}|^$" }
-        foreach ($line in $raw) {
-            $parts = ($line.Line -split "\s{2,}").Where({ $_ -ne "" })
+function _pw_parse_winget_lines {
+    param([string[]]$lines)
+    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    # winget imprime una tabla con columnas separadas por ≥2 espacios
+    # La primera línea útil es el header — la usamos para detectar offsets exactos
+    $headerLine = $lines | Where-Object { $_ -match "^Name\s+Id\s+Version" } | Select-Object -First 1
+    if (-not $headerLine) {
+        # fallback: parseo genérico por espacios múltiples
+        foreach ($line in $lines) {
+            if ($line -match "^\s*$" -or $line -match "^-{3,}" -or $line -match "^Name\s") { continue }
+            $parts = ($line -split "\s{2,}").Where({ $_ -ne "" })
             if ($parts.Count -ge 2) {
-                $results += [PSCustomObject]@{
-                    Name    = $parts[0]
-                    ID      = if ($parts.Count -ge 3) { $parts[1] } else { "-" }
-                    Version = if ($parts.Count -ge 3) { $parts[2] } else { $parts[1] }
+                $results.Add([PSCustomObject]@{
+                    Name    = $parts[0].Trim()
+                    ID      = if ($parts.Count -ge 3) { $parts[1].Trim() } else { $parts[0].Trim() }
+                    Version = if ($parts.Count -ge 3) { $parts[2].Trim() } else { $parts[1].Trim() }
                     Source  = "winget"
                     Manager = "winget"
-                }
+                })
             }
         }
-    } catch {}
+        return $results
+    }
+
+    # Calcular offsets por posición de columna
+    $nameOff    = $headerLine.IndexOf("Name")
+    $idOff      = $headerLine.IndexOf("Id")
+    $versionOff = $headerLine.IndexOf("Version")
+    $sourceOff  = $headerLine.IndexOf("Source")
+
+    $dataStart = $false
+    foreach ($line in $lines) {
+        if ($line -match "^-{3,}") { $dataStart = $true; continue }
+        if (-not $dataStart) { continue }
+        if ($line -match "^\s*$") { continue }
+        $len = $line.Length
+        if ($len -le $nameOff) { continue }
+
+        $name    = ""
+        $id      = ""
+        $version = ""
+        $src     = "winget"
+
+        try {
+            $name    = if ($len -gt $nameOff)    { $line.Substring($nameOff,    [Math]::Min($idOff - $nameOff,       $len - $nameOff)).Trim()    } else { "" }
+            $id      = if ($len -gt $idOff)      { $line.Substring($idOff,      [Math]::Min($versionOff - $idOff,   $len - $idOff)).Trim()      } else { "" }
+            $version = if ($len -gt $versionOff) { $line.Substring($versionOff, [Math]::Min(($sourceOff -gt 0 ? $sourceOff : $len) - $versionOff, $len - $versionOff)).Trim() } else { "" }
+        } catch { continue }
+
+        if ($name -and $id) {
+            $results.Add([PSCustomObject]@{
+                Name    = $name
+                ID      = $id
+                Version = if ($version) { $version } else { "?" }
+                Source  = $src
+                Manager = "winget"
+            })
+        }
+    }
     return $results
 }
 
-function _pw_search_choco {
-    param([string]$query)
-    $results = @()
-    try {
-        $raw = choco search $query --limit-output 2>$null
-        foreach ($line in $raw) {
-            $parts = $line -split "\|"
-            if ($parts.Count -ge 2) {
-                $results += [PSCustomObject]@{
-                    Name    = $parts[0]
-                    ID      = $parts[0]
-                    Version = $parts[1]
-                    Source  = "chocolatey"
-                    Manager = "choco"
-                }
-            }
+
+function _pw_parse_choco_lines {
+    param([string[]]$lines)
+    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+    foreach ($line in $lines) {
+        # choco --limit-output produce: NombrePaquete|versión
+        $parts = $line -split "\|"
+        if ($parts.Count -ge 2 -and $parts[0] -notmatch "^\s*$") {
+            $results.Add([PSCustomObject]@{
+                Name    = $parts[0].Trim()
+                ID      = $parts[0].Trim()
+                Version = $parts[1].Trim()
+                Source  = "chocolatey"
+                Manager = "choco"
+            })
         }
-    } catch {}
+    }
     return $results
 }
 
-function _pw_search_scoop {
-    param([string]$query)
-    $results = @()
-    try {
-        $raw = scoop search $query 2>$null | Where-Object { $_ -match "\S" }
-        $inResults = $false
-        foreach ($line in $raw) {
-            if ($line -match "^Results from") { $inResults = $true; continue }
-            if ($inResults -and $line -match "^\s+(\S+)\s+\((\S+)\)") {
-                $results += [PSCustomObject]@{
-                    Name    = $Matches[1]
-                    ID      = $Matches[1]
-                    Version = $Matches[2]
-                    Source  = "scoop"
-                    Manager = "scoop"
-                }
-            } elseif ($inResults -and $line -match "^\s+'([^']+)'\s+bucket:\s+(\S+)") {
-                # newer scoop format
-            } elseif ($inResults -and $line -notmatch "^\s*$" -and $line -notmatch "^-") {
-                $parts = ($line.Trim() -split "\s+")
-                if ($parts.Count -ge 1 -and $parts[0] -notmatch "^[Nn]ame") {
-                    $results += [PSCustomObject]@{
-                        Name    = $parts[0]
-                        ID      = $parts[0]
-                        Version = if ($parts.Count -ge 2) { $parts[1] } else { "?" }
-                        Source  = "scoop"
-                        Manager = "scoop"
-                    }
-                }
-            }
+function _pw_parse_scoop_lines {
+    param([string[]]$lines)
+    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $inResults = $false
+    foreach ($line in $lines) {
+        if ($line -match "^Results from") { $inResults = $true; continue }
+        if (-not $inResults) { continue }
+        if ($line -match "^\s*$" -or $line -match "^-{3,}") { continue }
+
+        # Formato moderno: "  nombre (versión) [bucket]"
+        if ($line -match "^\s+(\S+)\s+\(([^)]+)\)") {
+            $results.Add([PSCustomObject]@{
+                Name    = $Matches[1]
+                ID      = $Matches[1]
+                Version = $Matches[2]
+                Source  = "scoop"
+                Manager = "scoop"
+            })
+            continue
         }
-    } catch {}
+        # Formato antiguo: columnas separadas
+        $parts = ($line.Trim() -split "\s{2,}").Where({ $_ -ne "" })
+        if ($parts.Count -ge 1 -and $parts[0] -notmatch "^[Nn]ame$|^Source$") {
+            $results.Add([PSCustomObject]@{
+                Name    = $parts[0]
+                ID      = $parts[0]
+                Version = if ($parts.Count -ge 2) { $parts[1] } else { "?" }
+                Source  = "scoop"
+                Manager = "scoop"
+            })
+        }
+    }
     return $results
 }
 
 #endregion
 
-#region ── Result Renderer ──────────────────────────────────
+#region ── Search Engine (Jobs con exePath explícito) ────────
+
+function _pw_search_all {
+    param($managers, [string]$query, [int]$limit = 40)
+
+    $results   = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $jobs      = @{}
+    $exePaths  = @{}   # guardamos exe paths para pasarlos a los jobs
+
+    # ── Lanzar jobs ──────────────────────────────────────────
+    if ($managers["winget"]) {
+        $exe = $managers["winget"]
+        $jobs["winget"] = Start-Job -ScriptBlock {
+            param($exe, $q)
+            try { & $exe search --query $q --accept-source-agreements 2>$null }
+            catch { @() }
+        } -ArgumentList $exe, $query
+    }
+
+    if ($managers["choco"]) {
+        $exe = $managers["choco"]
+        $jobs["choco"] = Start-Job -ScriptBlock {
+            param($exe, $q)
+            try { & $exe search $q --limit-output 2>$null }
+            catch { @() }
+        } -ArgumentList $exe, $query
+    }
+
+    if ($managers["scoop"]) {
+        $exe = $managers["scoop"]
+        $jobs["scoop"] = Start-Job -ScriptBlock {
+            param($exe, $q)
+            try { & $exe search $q 2>$null }
+            catch { @() }
+        } -ArgumentList $exe, $query
+    }
+
+    # ── Recolectar con timeout por job ───────────────────────
+    foreach ($key in $jobs.Keys) {
+        $job = $jobs[$key]
+        $finished = $job | Wait-Job -Timeout 25
+        if ($finished) {
+            $raw = Receive-Job $job -ErrorAction SilentlyContinue
+            $lines = @($raw | ForEach-Object { "$_" })  # asegurar strings
+            switch ($key) {
+                "winget" { $parsed = _pw_parse_winget_lines $lines }
+                "choco"  { $parsed = _pw_parse_choco_lines  $lines }
+                "scoop"  { $parsed = _pw_parse_scoop_lines  $lines }
+            }
+            foreach ($r in $parsed) { $results.Add($r) }
+        } else {
+            _pw_color "  [!] Timeout en $key — omitiendo." DarkGray
+            $job | Stop-Job
+        }
+        Remove-Job $job -Force
+    }
+
+    # Limitar resultados si hay demasiados
+    if ($results.Count -gt $limit) {
+        return $results | Select-Object -First $limit
+    }
+    return $results
+}
+
+#endregion
+
+
+#region ── Renderer ─────────────────────────────────────────
+
+$script:SRC_COLORS = @{
+    "winget"     = "Cyan"
+    "chocolatey" = "Yellow"
+    "scoop"      = "Green"
+}
 
 function _pw_render_results {
-    param($results, [string]$query)
+    param(
+        [object]$results,
+        [string]$query    = "",
+        [switch]$NoIndex
+    )
 
-    if ($results.Count -eq 0) {
-        _pw_color "  Sin resultados para '$query'." Yellow
+    # Garantizar array aunque sea 1 objeto o nulo
+    $arr = @($results)
+
+    if ($arr.Count -eq 0) {
+        if ($query) { _pw_color "  Sin resultados para '$query'." Yellow }
         return
     }
 
-    $sourceColors = @{
-        "winget"     = "Cyan"
-        "chocolatey" = "Yellow"
-        "scoop"      = "Green"
+    # Header tabla
+    _pw_color ""
+    if (-not $NoIndex) {
+        _pw_color ("  {0,-4} {1,-36} {2,-24} {3,-14} {4}" -f "#","Nombre","ID","Versión","Fuente") DarkGray
+    } else {
+        _pw_color ("  {0,-36} {1,-24} {2,-14} {3}" -f "Nombre","ID","Versión","Fuente") DarkGray
     }
-
-    _pw_color ("  {0,-40} {1,-20} {2,-12} {3}" -f "Nombre","ID","Versión","Fuente") DarkGray
-    _pw_color ("  " + ("-" * 80)) DarkGray
+    _pw_sep
 
     $i = 1
-    foreach ($r in $results) {
-        $col = $sourceColors[$r.Source]
-        $idx = "[$i]".PadRight(4)
-        $name = $r.Name.Substring(0, [Math]::Min($r.Name.Length, 38)).PadRight(40)
-        $id   = $r.ID.Substring(0, [Math]::Min($r.ID.Length, 18)).PadRight(20)
-        $ver  = $r.Version.PadRight(12)
-        Write-Host ("  " + $idx) -ForegroundColor DarkGray -NoNewline
-        Write-Host ($name + $id + $ver) -NoNewline
-        Write-Host $r.Source -ForegroundColor $col
+    foreach ($r in $arr) {
+        $col  = $script:SRC_COLORS[$r.Source]
+        if (-not $col) { $col = "White" }
+
+        $name = _pw_truncate $r.Name 34
+        $id   = _pw_truncate $r.ID   22
+        $ver  = _pw_truncate $r.Version 12
+
+        if (-not $NoIndex) {
+            _pw_color ("  [{0,-2}] " -f $i) DarkGray -NoNewline
+            _pw_color ("{0,-36}{1,-24}{2,-14}" -f $name,$id,$ver) White -NoNewline
+        } else {
+            _pw_color ("  {0,-36}{1,-24}{2,-14}" -f $name,$id,$ver) White -NoNewline
+        }
+        _pw_color $r.Source $col
         $i++
     }
     _pw_color ""
 }
 
+function _pw_truncate {
+    param([string]$str, [int]$max)
+    if (-not $str) { return "".PadRight($max) }
+    if ($str.Length -le $max) { return $str.PadRight($max) }
+    return ($str.Substring(0, $max - 1) + "…")
+}
+
 #endregion
 
-#region ── Install / Uninstall / Update ─────────────────────
+#region ── Install / Uninstall / Update / Outdated ──────────
 
-function _pw_install_with {
+function _pw_do_install {
     param([PSCustomObject]$pkg)
-
-    _pw_color "  → Instalando '$($pkg.Name)' desde $($pkg.Source) ..." Cyan
     _pw_color ""
-
+    _pw_color "  → Instalando: $($pkg.Name)  [$($pkg.Source)  v$($pkg.Version)]" Cyan
+    _pw_sep
     switch ($pkg.Manager) {
         "winget" { winget install --id $pkg.ID --accept-package-agreements --accept-source-agreements }
         "choco"  { choco install $pkg.ID -y }
@@ -169,120 +335,80 @@ function _pw_install_with {
     }
 }
 
-function _pw_uninstall_with {
-    param([string]$packageName, [string]$manager)
-
-    _pw_color "  → Desinstalando '$packageName' con $manager ..." Yellow
-
-    switch ($manager) {
-        "winget" { winget uninstall --name $packageName }
-        "choco"  { choco uninstall $packageName -y }
-        "scoop"  { scoop uninstall $packageName }
+function _pw_do_uninstall {
+    param([string]$name, [string]$mgr)
+    _pw_color ""
+    _pw_color "  → Desinstalando '$name' con $mgr ..." Yellow
+    _pw_sep
+    switch ($mgr) {
+        "winget" { winget uninstall --name $name }
+        "choco"  { choco uninstall $name -y }
+        "scoop"  { scoop uninstall $name }
     }
 }
 
-function _pw_update_all {
+function _pw_do_update_all {
     param($managers)
-
     _pw_color "  Actualizando todos los gestores activos..." Cyan
     _pw_color ""
-
     if ($managers["winget"]) {
-        _pw_color "  [winget] actualizando..." Cyan
+        _pw_color "  ── winget ──────────────────────" Cyan
         winget upgrade --all --accept-package-agreements --accept-source-agreements
     }
     if ($managers["choco"]) {
-        _pw_color "  [choco] actualizando..." Yellow
+        _pw_color "  ── chocolatey ──────────────────" Yellow
         choco upgrade all -y
     }
     if ($managers["scoop"]) {
-        _pw_color "  [scoop] actualizando..." Green
+        _pw_color "  ── scoop ───────────────────────" Green
         scoop update *
     }
 }
 
-#endregion
-
-#region ── Info ─────────────────────────────────────────────
-
-function _pw_info_package {
-    param([string]$query, $managers)
-
-    _pw_color "  Info para: $query" Cyan
+function _pw_do_outdated {
+    param($managers)
+    _pw_color "  Paquetes con actualizaciones disponibles:" Cyan
     _pw_color ""
-
     if ($managers["winget"]) {
-        _pw_color "  ── winget ─────────────────────────────" Cyan
-        winget show $query 2>$null
+        _pw_color "  ── winget ──────────────────────" Cyan
+        winget upgrade --accept-source-agreements 2>$null | Where-Object { $_ -notmatch "^\s*$" }
     }
     if ($managers["choco"]) {
-        _pw_color "  ── chocolatey ─────────────────────────" Yellow
-        choco info $query 2>$null
-    }
-}
-
-#endregion
-
-#region ── List Installed ───────────────────────────────────
-
-function _pw_list_installed {
-    param($managers, [string]$filter = "")
-
-    _pw_color "  Paquetes instalados:" Cyan
-    _pw_color ""
-
-    if ($managers["winget"]) {
-        _pw_color "  ── winget ─────────────────────────────" Cyan
-        if ($filter) { winget list --query $filter } else { winget list }
-    }
-    if ($managers["choco"]) {
-        _pw_color "  ── chocolatey ─────────────────────────" Yellow
-        if ($filter) { choco list --local-only | Where-Object { $_ -match $filter } }
-        else { choco list --local-only }
+        _pw_color "  ── chocolatey ──────────────────" Yellow
+        choco outdated 2>$null
     }
     if ($managers["scoop"]) {
-        _pw_color "  ── scoop ──────────────────────────────" Green
-        if ($filter) { scoop list | Where-Object { $_ -match $filter } }
-        else { scoop list }
+        _pw_color "  ── scoop ───────────────────────" Green
+        scoop status 2>$null
     }
 }
 
 #endregion
 
-#region ── Interactive Source Selector ──────────────────────
+
+#region ── Source Picker ────────────────────────────────────
 
 function _pw_pick_source {
-    param($matches_for_pkg)
+    param([object]$candidates)
+    $arr = @($candidates)
+    if ($arr.Count -eq 1) { return $arr[0] }
 
-    if ($matches_for_pkg.Count -eq 1) {
-        return $matches_for_pkg[0]
-    }
-
-    _pw_color "  Múltiples fuentes disponibles para este paquete:" Yellow
+    _pw_color "  Mismo paquete disponible en múltiples fuentes:" Yellow
     _pw_color ""
+    _pw_render_results $arr -NoIndex:$false
 
-    $sourceColors = @{ "winget" = "Cyan"; "chocolatey" = "Yellow"; "scoop" = "Green" }
+    $choice = Read-Host "  Elige fuente (número, Enter=cancelar)"
+    if ([string]::IsNullOrWhiteSpace($choice)) { return $null }
 
-    $i = 1
-    foreach ($m in $matches_for_pkg) {
-        $col = $sourceColors[$m.Source]
-        Write-Host ("    [{0}] " -f $i) -ForegroundColor DarkGray -NoNewline
-        Write-Host ("{0,-30}" -f $m.Name) -NoNewline
-        Write-Host ("v{0,-15}" -f $m.Version) -NoNewline
-        Write-Host $m.Source -ForegroundColor $col
-        $i++
+    $idx = 0
+    if (-not [int]::TryParse($choice, [ref]$idx)) {
+        _pw_color "  Entrada inválida." Red; return $null
     }
-
-    _pw_color ""
-    $choice = Read-Host "  Elige fuente (número)"
-
-    $idx = [int]$choice - 1
-    if ($idx -ge 0 -and $idx -lt $matches_for_pkg.Count) {
-        return $matches_for_pkg[$idx]
-    } else {
-        _pw_color "  Selección inválida." Red
-        return $null
+    $idx--
+    if ($idx -lt 0 -or $idx -ge $arr.Count) {
+        _pw_color "  Número fuera de rango." Red; return $null
     }
+    return $arr[$idx]
 }
 
 #endregion
@@ -290,12 +416,26 @@ function _pw_pick_source {
 #region ── Main Entry Point ─────────────────────────────────
 
 function pacwin {
+    [CmdletBinding()]
     param(
-        [Parameter(Position = 0)] [string]$Command = "help",
-        [Parameter(Position = 1)] [string]$Query    = "",
-        [switch]$All,
-        [string]$Manager = ""
+        [Parameter(Position = 0)]
+        [ValidateSet("search","install","uninstall","remove","update","upgrade",
+                     "list","info","outdated","status","help","")]
+        [string]$Command = "help",
+
+        [Parameter(Position = 1, ValueFromRemainingArguments)]
+        [string[]]$Args = @(),
+
+        # Fuerza un gestor específico para la operación
+        [ValidateSet("winget","choco","scoop","")]
+        [string]$Manager = "",
+
+        # Límite de resultados en search/install
+        [int]$Limit = 40
     )
+
+    # Unir args en query string
+    $Query = ($Args -join " ").Trim()
 
     $managers = _pw_detect_managers
 
@@ -307,89 +447,20 @@ function pacwin {
             if (-not (_pw_assert_managers $managers)) { return }
 
             _pw_header
-            _pw_color "  Buscando '$Query' en: $($managers.Keys -join ', ')..." DarkGray
-            _pw_color ""
-
-            $all_results = @()
-            $jobs = @{}
-
-            # Búsqueda paralela con jobs
-            if ($managers["winget"]) {
-                $jobs["winget"] = Start-Job -ScriptBlock {
-                    param($q)
-                    $r = @()
-                    $raw = winget search --query $q --accept-source-agreements 2>$null |
-                           Select-String -Pattern "^\S" |
-                           Where-Object { $_ -notmatch "^Name|^-{3,}|^$" }
-                    foreach ($line in $raw) {
-                        $parts = ($line.Line -split "\s{2,}").Where({ $_ -ne "" })
-                        if ($parts.Count -ge 2) {
-                            $r += [PSCustomObject]@{
-                                Name    = $parts[0]
-                                ID      = if ($parts.Count -ge 3) { $parts[1] } else { "-" }
-                                Version = if ($parts.Count -ge 3) { $parts[2] } else { $parts[1] }
-                                Source  = "winget"; Manager = "winget"
-                            }
-                        }
-                    }
-                    return $r
-                } -ArgumentList $Query
+            # Filtrar por Manager si se especificó
+            if ($Manager) {
+                $active = [ordered]@{}
+                if ($managers[$Manager]) { $active[$Manager] = $managers[$Manager] }
+                else { _pw_color "  [!] Gestor '$Manager' no disponible." Red; return }
+                $managers = $active
             }
 
-            if ($managers["choco"]) {
-                $jobs["choco"] = Start-Job -ScriptBlock {
-                    param($q)
-                    $r = @()
-                    $raw = choco search $q --limit-output 2>$null
-                    foreach ($line in $raw) {
-                        $parts = $line -split "\|"
-                        if ($parts.Count -ge 2) {
-                            $r += [PSCustomObject]@{
-                                Name    = $parts[0]; ID = $parts[0]
-                                Version = $parts[1]; Source = "chocolatey"; Manager = "choco"
-                            }
-                        }
-                    }
-                    return $r
-                } -ArgumentList $Query
-            }
+            _pw_color "  Buscando '$Query' en: $(($managers.Keys) -join ', ') ..." DarkGray
+            $all = _pw_search_all $managers $Query $Limit
+            _pw_render_results $all $Query
 
-            if ($managers["scoop"]) {
-                $jobs["scoop"] = Start-Job -ScriptBlock {
-                    param($q)
-                    $r = @()
-                    $raw = scoop search $q 2>$null | Where-Object { $_ -match "\S" }
-                    $inResults = $false
-                    foreach ($line in $raw) {
-                        if ($line -match "^Results from") { $inResults = $true; continue }
-                        if ($inResults) {
-                            $parts = ($line.Trim() -split "\s+")
-                            if ($parts.Count -ge 1 -and $parts[0] -notmatch "^[Nn]ame|^-") {
-                                $r += [PSCustomObject]@{
-                                    Name    = $parts[0]; ID = $parts[0]
-                                    Version = if ($parts.Count -ge 2) { $parts[1] } else { "?" }
-                                    Source  = "scoop"; Manager = "scoop"
-                                }
-                            }
-                        }
-                    }
-                    return $r
-                } -ArgumentList $Query
-            }
-
-            # Esperar y recolectar
-            foreach ($key in $jobs.Keys) {
-                $job = $jobs[$key]
-                $job | Wait-Job | Out-Null
-                $res = Receive-Job $job
-                if ($res) { $all_results += $res }
-                Remove-Job $job
-            }
-
-            _pw_render_results $all_results $Query
-
-            if ($all_results.Count -gt 0) {
-                _pw_color "  Total: $($all_results.Count) resultado(s). Usa 'pacwin install <nombre>' para instalar." DarkGray
+            if ($all.Count -gt 0) {
+                _pw_color "  $($all.Count) resultado(s)  ·  pacwin install <nombre> para instalar" DarkGray
             }
         }
 
@@ -400,80 +471,76 @@ function pacwin {
 
             _pw_header
             _pw_color "  Buscando '$Query'..." DarkGray
-            _pw_color ""
 
-            $all_results = @()
-            if ($managers["winget"])  { $all_results += _pw_search_winget $Query }
-            if ($managers["choco"])   { $all_results += _pw_search_choco  $Query }
-            if ($managers["scoop"])   { $all_results += _pw_search_scoop  $Query }
-
-            if ($all_results.Count -eq 0) {
-                _pw_color "  Sin resultados para '$Query'." Yellow
-                return
+            $searchMgr = $managers
+            if ($Manager) {
+                $searchMgr = [ordered]@{}
+                if ($managers[$Manager]) { $searchMgr[$Manager] = $managers[$Manager] }
+                else { _pw_color "  [!] Gestor '$Manager' no disponible." Red; return }
             }
 
-            # Filtrar por coincidencia exacta primero, luego mostrar todo
-            $exact = $all_results | Where-Object {
-                $_.Name -like "*$Query*" -or $_.ID -like "*$Query*"
+            $all = _pw_search_all $searchMgr $Query $Limit
+
+            if ($all.Count -eq 0) {
+                _pw_color "  Sin resultados para '$Query'." Yellow; return
             }
 
-            $pool = if ($exact.Count -gt 0) { $exact } else { $all_results }
+            # Priorizar coincidencias exactas
+            $exact = @($all | Where-Object { $_.Name -like "*$Query*" -or $_.ID -like "*$Query*" })
+            $pool  = if ($exact.Count -gt 0) { $exact } else { @($all) }
 
             _pw_render_results $pool $Query
 
-            # Si el Manager fue forzado, filtrar por ese
-            if ($Manager) {
-                $pool = $pool | Where-Object { $_.Manager -eq $Manager }
-                if ($pool.Count -eq 0) {
-                    _pw_color "  No hay resultados en el gestor '$Manager'." Red
-                    return
-                }
-            }
-
-            $choice = Read-Host "  Número a instalar (Enter para cancelar)"
+            $choice = Read-Host "  Número a instalar (Enter=cancelar)"
             if ([string]::IsNullOrWhiteSpace($choice)) { return }
 
-            $idx = [int]$choice - 1
+            $idx = 0
+            if (-not [int]::TryParse($choice, [ref]$idx)) {
+                _pw_color "  Entrada inválida." Red; return
+            }
+            $idx--
             if ($idx -lt 0 -or $idx -ge $pool.Count) {
-                _pw_color "  Número inválido." Red
-                return
+                _pw_color "  Número fuera de rango." Red; return
             }
 
             $selected = $pool[$idx]
 
-            # Ver si el mismo nombre existe en múltiples fuentes
-            $same_name = $pool | Where-Object { $_.Name -eq $selected.Name -and $_.Source -ne $selected.Source }
+            # Verificar si hay el mismo ID disponible en otras fuentes
+            $dupes = @($pool | Where-Object {
+                $_.ID -eq $selected.ID -and $_.Source -ne $selected.Source
+            })
 
-            if ($same_name.Count -gt 0) {
-                $candidates = @($selected) + $same_name
-                $final = _pw_pick_source $candidates
+            if ($dupes.Count -gt 0) {
+                $final = _pw_pick_source (@($selected) + $dupes)
                 if ($null -eq $final) { return }
-                _pw_install_with $final
+                _pw_do_install $final
             } else {
-                _pw_install_with $selected
+                _pw_do_install $selected
             }
         }
 
-        # ── UNINSTALL ────────────────────────────────────────
-        "uninstall" {
+
+        # ── UNINSTALL / REMOVE ───────────────────────────────
+        { $_ -in "uninstall","remove" } {
             if (-not $Query) { _pw_color "  Uso: pacwin uninstall <nombre>" Yellow; return }
 
-            $mgr = if ($Manager) { $Manager } else {
-                _pw_color "  ¿Con qué gestor desinstalar? [winget/choco/scoop]: " Yellow -NoNewline
-                Read-Host
+            $mgr = $Manager
+            if (-not $mgr) {
+                _pw_color "  ¿Con qué gestor? [winget/choco/scoop]: " Yellow -NoNewline
+                $mgr = (Read-Host).Trim()
             }
-
-            _pw_color ""
-            _pw_uninstall_with $Query $mgr
+            if ($mgr -notin @("winget","choco","scoop")) {
+                _pw_color "  Gestor inválido: '$mgr'" Red; return
+            }
+            _pw_do_uninstall $Query $mgr
         }
 
-        # ── UPDATE ───────────────────────────────────────────
-        "update" {
+        # ── UPDATE / UPGRADE ─────────────────────────────────
+        { $_ -in "update","upgrade" } {
             if (-not (_pw_assert_managers $managers)) { return }
             _pw_header
 
             if ($Query) {
-                # actualizar paquete específico
                 $mgr = if ($Manager) { $Manager } else { "winget" }
                 _pw_color "  Actualizando '$Query' con $mgr..." Cyan
                 switch ($mgr) {
@@ -482,15 +549,55 @@ function pacwin {
                     "scoop"  { scoop update $Query }
                 }
             } else {
-                _pw_update_all $managers
+                $active = $managers
+                if ($Manager) {
+                    $active = [ordered]@{}
+                    if ($managers[$Manager]) { $active[$Manager] = $managers[$Manager] }
+                }
+                _pw_do_update_all $active
             }
+        }
+
+        # ── OUTDATED ─────────────────────────────────────────
+        "outdated" {
+            if (-not (_pw_assert_managers $managers)) { return }
+            _pw_header
+            $active = $managers
+            if ($Manager) {
+                $active = [ordered]@{}
+                if ($managers[$Manager]) { $active[$Manager] = $managers[$Manager] }
+            }
+            _pw_do_outdated $active
         }
 
         # ── LIST ─────────────────────────────────────────────
         "list" {
             if (-not (_pw_assert_managers $managers)) { return }
             _pw_header
-            _pw_list_installed $managers $Query
+            _pw_color "  Paquetes instalados:" Cyan
+            _pw_color ""
+
+            $active = $managers
+            if ($Manager) {
+                $active = [ordered]@{}
+                if ($managers[$Manager]) { $active[$Manager] = $managers[$Manager] }
+            }
+
+            if ($active["winget"]) {
+                _pw_color "  ── winget ──────────────────────────────" Cyan
+                if ($Query) { winget list --query $Query } else { winget list }
+            }
+            if ($active["choco"]) {
+                _pw_color "  ── chocolatey ──────────────────────────" Yellow
+                # choco list (sin --local-only, deprecado en v2)
+                if ($Query) { choco list | Where-Object { $_ -match $Query } }
+                else { choco list }
+            }
+            if ($active["scoop"]) {
+                _pw_color "  ── scoop ───────────────────────────────" Green
+                if ($Query) { scoop list | Where-Object { $_ -match $Query } }
+                else { scoop list }
+            }
         }
 
         # ── INFO ─────────────────────────────────────────────
@@ -498,50 +605,65 @@ function pacwin {
             if (-not $Query) { _pw_color "  Uso: pacwin info <nombre>" Yellow; return }
             if (-not (_pw_assert_managers $managers)) { return }
             _pw_header
-            _pw_info_package $Query $managers
+            _pw_color "  Info: $Query" Cyan
+            _pw_color ""
+            if ($managers["winget"]) {
+                _pw_color "  ── winget ──────────────────────────────" Cyan
+                winget show $Query 2>$null
+            }
+            if ($managers["choco"]) {
+                _pw_color "  ── chocolatey ──────────────────────────" Yellow
+                choco info $Query 2>$null
+            }
         }
+
 
         # ── STATUS ───────────────────────────────────────────
         "status" {
             _pw_header
-            _pw_color "  Gestores detectados:" Cyan
+            _pw_color "  Gestores detectados en este sistema:" Cyan
             _pw_color ""
-
-            $sourceColors = @{ "winget" = "Cyan"; "chocolatey" = "Yellow"; "scoop" = "Green" }
-
-            $all = @("winget", "choco", "scoop")
-            foreach ($m in $all) {
-                $available = $managers[$m]
-                $col  = if ($available) { $sourceColors[$m] ?? "White" } else { "DarkGray" }
-                $mark = if ($available) { "✓" } else { "✗" }
-                Write-Host ("    {0} " -f $mark) -ForegroundColor $col -NoNewline
-                Write-Host $m -ForegroundColor $col
+            $all_mgr = @("winget","choco","scoop")
+            foreach ($m in $all_mgr) {
+                if ($managers[$m]) {
+                    _pw_color "  ✓ " Green -NoNewline
+                    _pw_color ("{0,-10}" -f $m) Green -NoNewline
+                    _pw_color $managers[$m] DarkGray
+                } else {
+                    _pw_color "  ✗ " DarkGray -NoNewline
+                    _pw_color $m DarkGray
+                }
             }
             _pw_color ""
+            _pw_color "  PowerShell: $($PSVersionTable.PSVersion)" DarkGray
         }
 
         # ── HELP ─────────────────────────────────────────────
         default {
             _pw_header
-            _pw_color "  Uso:" Cyan
+            _pw_color "  Comandos:" Cyan
             _pw_color ""
-            _pw_color "    pacwin search  <nombre>              Busca en todos los gestores activos" White
-            _pw_color "    pacwin install <nombre>              Busca e instala (con selector de fuente)" White
-            _pw_color "    pacwin uninstall <nombre>            Desinstala un paquete" White
-            _pw_color "    pacwin update   [nombre]             Actualiza todo o un paquete específico" White
-            _pw_color "    pacwin list     [filtro]             Lista paquetes instalados" White
-            _pw_color "    pacwin info     <nombre>             Muestra info detallada del paquete" White
-            _pw_color "    pacwin status                        Muestra gestores disponibles" White
+            _pw_color "    pacwin search   <nombre>         Busca en gestores activos" White
+            _pw_color "    pacwin install  <nombre>         Busca, lista y deja elegir + fuente" White
+            _pw_color "    pacwin uninstall <nombre>        Desinstala" White
+            _pw_color "    pacwin update   [nombre]         Actualiza todo o un paquete" White
+            _pw_color "    pacwin outdated                  Lista paquetes con updates disponibles" White
+            _pw_color "    pacwin list     [filtro]         Lista instalados" White
+            _pw_color "    pacwin info     <nombre>         Detalles del paquete" White
+            _pw_color "    pacwin status                    Gestores disponibles + rutas" White
             _pw_color ""
-            _pw_color "  Flags opcionales:" DarkGray
-            _pw_color "    -Manager winget|choco|scoop          Fuerza un gestor específico" DarkGray
+            _pw_color "  Flags:" DarkGray
+            _pw_color "    -Manager  winget|choco|scoop     Restringe a un gestor específico" DarkGray
+            _pw_color "    -Limit    N                      Máximo de resultados (default 40)" DarkGray
             _pw_color ""
             _pw_color "  Ejemplos:" DarkGray
             _pw_color "    pacwin search vlc" DarkGray
-            _pw_color "    pacwin install nodejs" DarkGray
-            _pw_color "    pacwin install nodejs -Manager scoop" DarkGray
-            _pw_color "    pacwin update" DarkGray
-            _pw_color "    pacwin uninstall vlc" DarkGray
+            _pw_color "    pacwin install node" DarkGray
+            _pw_color "    pacwin install node -Manager scoop" DarkGray
+            _pw_color "    pacwin update -Manager choco" DarkGray
+            _pw_color "    pacwin outdated" DarkGray
+            _pw_color "    pacwin list reaper" DarkGray
+            _pw_color "    pacwin search ffmpeg -Limit 10" DarkGray
             _pw_color ""
         }
     }
