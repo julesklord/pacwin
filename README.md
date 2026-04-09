@@ -1,6 +1,6 @@
 # pacwin
 
-![Version](https://img.shields.io/badge/version-1.2.1-cyan)
+![Version](https://img.shields.io/badge/version-0.1.0-cyan)
 ![PowerShell](https://img.shields.io/badge/powershell-5.1%20%7C%207%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
@@ -97,7 +97,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 ---
 
 ### Metadata
-- **Status**: Stable (v1.2.1)
+- **Status**: Stable (v0.1.0)
 - **Requirements**: Windows PowerShell 5.1 or PS 7.2+
 - **Maintainers**: pacwin core contributors
 - **Known issues**: Scoop searches can timeout if bucket metadata is stale; run `scoop update` to fix.
