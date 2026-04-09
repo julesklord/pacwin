@@ -1,0 +1,11 @@
+# PowerShell backups
+*.bak.*
+*.bak
+
+# Temporary walkthroughs
+walkthrough_*.md
+
+# Session logs (brain directory is outside, but just in case)
+logs/
+bin/
+obj/
