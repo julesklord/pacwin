@@ -1,5 +1,9 @@
 # pacwin
 
+<p align="center">
+  <img src="docs/logo_pacwin.png" width="300" alt="pacwin logo">
+</p>
+
 ![Version](https://img.shields.io/badge/version-0.1.0-cyan)
 ![PowerShell](https://img.shields.io/badge/powershell-5.1%20%7C%207%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -56,7 +60,7 @@ Get `pacwin` running in under 2 minutes:
 
 ### Automated Install (via curl)
 ```powershell
-curl -sSL https://raw.githubusercontent.com/YOUR_USERNAME/pacwin/main/get-pacwin.ps1 | powershell -Command -
+curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | powershell -Command -
 ```
 
 ## Usage

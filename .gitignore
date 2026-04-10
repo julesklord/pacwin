@@ -9,3 +9,4 @@ walkthrough_*.md
 logs/
 bin/
 obj/
+.vscode/
