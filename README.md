@@ -17,6 +17,7 @@ Unify winget, chocolatey, and scoop under a fast, secure, pacman-like CLI for Wi
 Managing software on Windows typically requires interacting with three distinct tools (winget, choco, scoop), each with its own syntax, output formats, and silent failure modes. Existing solutions often lack a unified search across all managers or introduce significant performance overhead by spawning multiple heavy PowerShell processes.
 
 `pacwin` solves this by:
+
 - Providing a **single point of entry** for searching and installing packages.
 - Interpreting **cryptic exit codes** (like 3010 or 0x8A15002E) into clear status messages.
 - Using a **Hybrid Engine** (Runspaces/Threads) to execute searches in parallel without spiking CPU usage.
@@ -27,15 +28,20 @@ Get `pacwin` running in under 2 minutes:
 
 1. Open PowerShell (Administrator recommended for choco/winget).
 2. Download and run the installer:
+
    ```powershell
    # If you have the repo locally:
    .\install.ps1
    ```
+
 3. Restart your terminal and search for a package:
+
    ```powershell
    pacwin search vlc
    ```
+
 **Expected Output:**
+
 ```text
   #    Name           ID               Version    Source
   -----------------------------------------------------------
@@ -54,11 +60,13 @@ Get `pacwin` running in under 2 minutes:
 ## Installation
 
 ### Dependencies
+
 - **Windows 10/11**
 - **PowerShell 5.1** or **PowerShell 7+**
 - (Optional) `winget`, `choco`, or `scoop` (at least one must be in your PATH).
 
 ### Automated Install (via curl)
+
 ```powershell
 curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | powershell -Command -
 ```
@@ -77,14 +85,16 @@ curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps
 | **Check Outdated**| `pacwin outdated` | `pacwin -Qu` |
 
 ### Identifying Sources
+
 If you want to force a search or install using a specific manager:
+
 ```powershell
 pacwin search nodejs -Manager scoop
 ```
 
 ## Architecture & Design Philosophy
 
-`pacwin` is built as a **Script Module (.psm1)** for zero-installation overhead. 
+`pacwin` is built as a **Script Module (.psm1)** for zero-installation overhead.
 
 **Runspaces over Jobs**: The primary design goal was to avoid the high CPU usage of `Start-Job`. In PowerShell 5.1, `pacwin` uses a `RunspacePool` to execute CLI calls in background threads within the same process. This reduces startup time for searches by up to 3 seconds compared to traditional background jobs.
 
@@ -101,6 +111,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 ---
 
 ### Metadata
+
 - **Status**: Stable (v0.1.0)
 - **Requirements**: Windows PowerShell 5.1 or PS 7.2+
 - **Maintainers**: pacwin core contributors

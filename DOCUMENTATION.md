@@ -61,7 +61,7 @@ The project follows a modular functional design within a single `.psm1` file to 
 - `$Manager` (string, optional): One of `winget`, `choco`, `scoop`. Forces the operation to a specific manager.
 - `$Limit` (int, default: 40): Maximum results to display in search.
 
-**Returns:** 
+**Returns:**
 Returns an array of `PSCustomObject` for search operations or boolean success/fail states for actions.
 
 ## 5. Error Interpretation System
@@ -69,7 +69,7 @@ Returns an array of `PSCustomObject` for search operations or boolean success/fa
 Located in `_pw_handle_result` ([pacwin.psm1](file:///g:/DEVELOPMENT/pacwin/pacwin.psm1)), this system translates internal manager states:
 
 - **Winget**: Detects `0x8A15002E` (Restart Required) and maps it to a human-readable status.
-- **Chocolatey**: Handles exit codes `1641` and `3010` as success-with-reboot. 
+- **Chocolatey**: Handles exit codes `1641` and `3010` as success-with-reboot.
 - **Scoop**: Performs text-analysis on the output because Scoop often returns `ExitCode 0` even when a manifest is missing or access is denied.
 
 ## 6. Examples & Use Cases
