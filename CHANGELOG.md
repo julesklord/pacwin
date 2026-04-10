@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-04-09
 
 ### Added
+
 - **Hybrid Search Engine**: New search core that automatically detects PowerShell version.
   - PowerShell 7+: Uses `ForEach-Object -Parallel` for native threading.
   - PowerShell 5.1: Uses `RunspacePool` for lightweight asynchronous execution.
@@ -16,17 +17,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Technical Documentation**: Comprehensive `DOCUMENTATION.md` detailing architecture and API.
 
 ### Changed
+
 - **Internationalization**: Full project refactor to English (Code, Comments, UI).
 - **Aesthetic Overhaul**: Replaced extended ASCII box characters with standard ASCII for better indentation and compatibility.
 - **Installer Refactor**: Simplified `install.ps1` with automatic profile detection and standard module pathing.
 - **README Update**: New production-grade README with status badges and pacman mapping table.
 
 ### Fixed
+
 - High CPU usage during searches by replacing `Start-Job` with `Runspaces`.
 - Syntax errors and reserved variable warnings ($input renamed to $targetInput).
 - Encoding issues in PowerShell 5.1 (all files saved with UTF-8 BOM).
 
 ### Security
+
 - Reinforced input sanitization logic in `_pw_sanitize`.
 
 ---
