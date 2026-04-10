@@ -102,7 +102,7 @@ function _pw_parse_winget_lines {
     if (-not $headerLine) {
         foreach ($line in $lines) {
             # Skip progress bars, speeds, and headers
-            if ($line -match "^\s*$|^-{3,}|^Name\s|[â—Æê]|%|[\d.]+\s+[KMG]B\s*/") { continue }
+            if ($line -match "^\s*$|^-{3,}|^Name\s|[^\x00-\x7F]|%|[\d.]+\s+[KMG]B\s*/") { continue }
             $parts = ($line -split "\s{2,}").Where({ $_ -ne "" })
             if ($parts.Count -ge 2) {
                 $results.Add([PSCustomObject]@{
@@ -125,7 +125,7 @@ function _pw_parse_winget_lines {
     $dataStart = $false
     foreach ($line in $lines) {
         if ($line -match "^-{3,}") { $dataStart = $true; continue }
-        if (-not $dataStart -or $line -match "^\s*$|[â—Æê]|%|[\d.]+\s+[KMG]B\s*/") { continue }
+        if (-not $dataStart -or $line -match "^\s*$|[^\x00-\x7F]|%|[\d.]+\s+[KMG]B\s*/") { continue }
         $len = $line.Length
         if ($len -le $nameOff) { continue }
 
@@ -218,8 +218,10 @@ function _pw_search_all {
         # High-performance Parallel execution for PowerShell 7+
         $jobResults = $scripts.Keys | ForEach-Object -Parallel {
             $key = $_
-            $script = $using:scripts[$key]
-            $exe = $using:managers[$key]
+            $local_scripts = $using:scripts
+            $local_managers = $using:managers
+            $script = $local_scripts[$key]
+            $exe = $local_managers[$key]
             $q = $using:query
             $raw = & $script $exe $q
             return @{ Key = $key; Raw = $raw }
@@ -345,7 +347,32 @@ function pacwin {
 
         "^(update|upgrade|-Syu)$" {
             if ($Query) {
-                _pw_color "  Individual update not yet implemented." Yellow
+                _pw_color "  Looking for update candidates for '$Query'..." Cyan
+                if ($Manager) {
+                    _pw_do_update_single $Query $Manager
+                }
+                else {
+                    # Try to find which manager has it
+                    _pw_color "  Searching in outdated packages..." Gray
+                    $outdated = _pw_do_outdated $targetManagers -Silent
+                    $matches = $outdated | Where-Object { $_.ID -eq $Query -or $_.Name -eq $Query }
+                    
+                    if ($matches.Count -eq 0) {
+                        _pw_color "  No outdated package found matching '$Query'. Trying direct update..." Gray
+                        # Fallback: Try all target managers
+                        foreach ($m in $targetManagers.Keys) {
+                            _pw_do_update_single $Query $m
+                        }
+                    }
+                    elseif ($matches.Count -eq 1) {
+                        _pw_do_update_single $matches[0].ID $matches[0].Manager
+                    }
+                    else {
+                        _pw_color "  Multiple managers have updates for '$Query':" Yellow
+                        $pkg = _pw_pick_source $matches
+                        if ($pkg) { _pw_do_update_single $pkg.ID $pkg.Manager }
+                    }
+                }
             }
             else {
                 _pw_do_update_all $targetManagers
@@ -474,6 +501,21 @@ function _pw_do_uninstall {
     _pw_handle_result $mgr $LASTEXITCODE $output
 }
 
+function _pw_do_update_single {
+    param([string]$id, [string]$mgr)
+    _pw_color ""
+    _pw_color "  -> Updating '$id' with $mgr ..." Cyan
+    _pw_sep
+    
+    $output = @()
+    switch ($mgr) {
+        "winget" { $output = winget upgrade --id $id --accept-package-agreements --accept-source-agreements 2>&1 }
+        "choco"  { $output = choco upgrade $id -y 2>&1 }
+        "scoop"  { $output = scoop update $id 2>&1 }
+    }
+    _pw_handle_result $mgr $LASTEXITCODE $output
+}
+
 function _pw_do_update_all {
     param($managers)
     if ($managers["winget"]) {
@@ -491,19 +533,50 @@ function _pw_do_update_all {
 }
 
 function _pw_do_outdated {
-    param($managers)
+    param($managers, [switch]$Silent)
+    
+    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+
     if ($managers["winget"]) {
-        _pw_color "  -- winget -----------------------------" Cyan
-        winget upgrade --accept-source-agreements 2>$null
+        if (-not $Silent) { _pw_color "  -- winget -----------------------------" Cyan }
+        $out = winget upgrade --accept-source-agreements 2>$null
+        if ($Silent) {
+            $parsed = _pw_parse_winget_lines @($out | ForEach-Object { "$_" })
+            foreach ($p in $parsed) { $results.Add($p) }
+        }
     }
     if ($managers["choco"]) {
-        _pw_color "  -- chocolatey -------------------------" Yellow
-        choco outdated 2>$null
+        if (-not $Silent) { _pw_color "  -- chocolatey -------------------------" Yellow }
+        $out = choco outdated --limit-output 2>$null
+        if ($Silent) {
+            foreach ($line in $out) {
+                if ($line -match "^\s*$") { continue }
+                $parts = $line -split "\|"
+                if ($parts.Count -ge 3) {
+                    $results.Add([PSCustomObject]@{
+                        Name    = $parts[0]; ID = $parts[0]
+                        Version = $parts[2]; Source = "chocolatey"; Manager = "choco"
+                    })
+                }
+            }
+        }
     }
     if ($managers["scoop"]) {
-        _pw_color "  -- scoop ------------------------------" Green
-        scoop status 2>$null
+        if (-not $Silent) { _pw_color "  -- scoop ------------------------------" Green }
+        $out = scoop status 2>$null
+        if ($Silent) {
+            foreach ($line in $out) {
+                if ($line -match "(\S+)\s+has\s+a\s+new\s+version") {
+                    $results.Add([PSCustomObject]@{
+                        Name    = $Matches[1]; ID = $Matches[1]
+                        Version = "Later"; Source = "scoop"; Manager = "scoop"
+                    })
+                }
+            }
+        }
     }
+
+    if ($Silent) { return $results }
 }
 
 function _pw_do_list {

@@ -68,7 +68,7 @@ curl -sSL https://raw.githubusercontent.com/YOUR_USERNAME/pacwin/main/get-pacwin
 | **Search** | `pacwin search <query>` | `pacwin -Ss <query>` |
 | **Install** | `pacwin install <id>` | `pacwin -S <id>` |
 | **Uninstall** | `pacwin uninstall <id>` | `pacwin -R <id>` |
-| **Update All** | `pacwin update` | `pacwin -Syu` |
+| **Update** | `pacwin update [id]` | `pacwin -Syu` |
 | **List Installed** | `pacwin list` | `pacwin -Q` |
 | **Check Outdated**| `pacwin outdated` | `pacwin -Qu` |
 
