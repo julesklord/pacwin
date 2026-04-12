@@ -1,0 +1,14 @@
+﻿name: PowerShell CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Run Pester tests
+      shell: pwsh
+      run: Invoke-Pester -Path ./tests -Output Detailed
