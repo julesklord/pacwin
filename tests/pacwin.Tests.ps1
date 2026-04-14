@@ -50,7 +50,7 @@ Describe "pacwin core logic" {
         Import-Module $ModuleFile -Force
         # Mocking is hard after Import-Module in PS5.1 + Pester 3.4
         # So we just verify it doesn't crash
-        pacwin doctor
+        pacwin doctor -Name "doctor"
         $true | Should Be $true
     }
 
