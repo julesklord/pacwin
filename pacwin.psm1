@@ -310,7 +310,7 @@ function pacwin {
     }
 
     switch -Regex ($Command) {
-        "^(search|-S)$" {
+        "^(search|-Ss)$" {
             if (-not $Query) { _pw_color "  [!] Search term missing." Yellow; return }
             _pw_color "  > Searching for '$Query'..." Cyan
             $results = _pw_search_all $targetManagers $Query $Limit
@@ -397,7 +397,7 @@ function pacwin {
 
         "^(help|--help|-h)$" {
             _pw_color "  Usage:" Yellow
-            _pw_color "    pacwin search <query>      (or pacwin -S <query>)" White
+            _pw_color "    pacwin search <query>      (or pacwin -Ss <query>)" White
             _pw_color "    pacwin install <query>     (or pacwin -S <query>)" White
             _pw_color "    pacwin uninstall <name>    (or pacwin -R <name>)" White
             _pw_color "    pacwin update              (or pacwin -Syu)" White
@@ -534,49 +534,53 @@ function _pw_do_update_all {
 
 function _pw_do_outdated {
     param($managers, [switch]$Silent)
-    
-    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    $allResults = [System.Collections.Generic.List[PSCustomObject]]::new()
 
     if ($managers["winget"]) {
         if (-not $Silent) { _pw_color "  -- winget -----------------------------" Cyan }
         $out = winget upgrade --accept-source-agreements 2>$null
-        if ($Silent) {
-            $parsed = _pw_parse_winget_lines @($out | ForEach-Object { "$_" })
-            foreach ($p in $parsed) { $results.Add($p) }
-        }
+        $lines = @($out | ForEach-Object { "$_" })
+        $parsed = _pw_parse_winget_lines $lines
+        foreach ($p in $parsed) { $allResults.Add($p) }
     }
     if ($managers["choco"]) {
         if (-not $Silent) { _pw_color "  -- chocolatey -------------------------" Yellow }
         $out = choco outdated --limit-output 2>$null
-        if ($Silent) {
-            foreach ($line in $out) {
-                if ($line -match "^\s*$") { continue }
-                $parts = $line -split "\|"
-                if ($parts.Count -ge 3) {
-                    $results.Add([PSCustomObject]@{
-                        Name    = $parts[0]; ID = $parts[0]
-                        Version = $parts[2]; Source = "chocolatey"; Manager = "choco"
-                    })
-                }
+        foreach ($line in $out) {
+            if ($line -match "^\s*$") { continue }
+            $parts = $line -split "\|"
+            if ($parts.Count -ge 3) {
+                $allResults.Add([PSCustomObject]@{
+                    Name    = $parts[0]; ID = $parts[0]
+                    Version = $parts[2]; Source = "chocolatey"; Manager = "choco"
+                })
             }
         }
     }
     if ($managers["scoop"]) {
         if (-not $Silent) { _pw_color "  -- scoop ------------------------------" Green }
         $out = scoop status 2>$null
-        if ($Silent) {
-            foreach ($line in $out) {
-                if ($line -match "(\S+)\s+has\s+a\s+new\s+version") {
-                    $results.Add([PSCustomObject]@{
-                        Name    = $Matches[1]; ID = $Matches[1]
-                        Version = "Later"; Source = "scoop"; Manager = "scoop"
-                    })
-                }
+        foreach ($line in $out) {
+            if ($line -match "(\S+)\s+has\s+a\s+new\s+version") {
+                $allResults.Add([PSCustomObject]@{
+                    Name    = $Matches[1]; ID = $Matches[1]
+                    Version = "Later"; Source = "scoop"; Manager = "scoop"
+                })
             }
         }
     }
 
-    if ($Silent) { return $results }
+    if ($Silent) { return $allResults }
+
+    # Non-silent: render results via standard table
+    if ($allResults.Count -eq 0) {
+        _pw_color "  [OK] All packages are up to date." Green
+    }
+    else {
+        _pw_color "  Outdated packages ($($allResults.Count) found):" Yellow
+        _pw_render_results $allResults
+    }
 }
 
 function _pw_do_list {
@@ -591,7 +595,7 @@ function _pw_do_list {
     }
     if ($managers["choco"]) {
         _pw_color "  -- chocolatey -------------------------" Yellow
-        if ($filter) { choco list -l $filter } else { choco list -l }
+        if ($filter) { choco list --local-only $filter } else { choco list --local-only }
     }
     if ($managers["scoop"]) {
         _pw_color "  -- scoop ------------------------------" Green
