@@ -1,6 +1,6 @@
 # Parser Tests for pacwin
 
-$ModuleFile = Join-Path $PSScriptRoot "..\pacwin.psm1"
+$ModuleFile = Resolve-Path (Join-Path (Split-Path $PSScriptRoot) "pacwin.psm1") | Select-Object -ExpandProperty Path
 
 Describe "pacwin Parsers" {
     BeforeAll {
