@@ -1,11 +1,12 @@
 # Parser Tests for pacwin
 
-$ModuleFile = Join-Path $PSScriptRoot "..\pacwin.psm1"
+
 
 Describe "pacwin Parsers" {
     BeforeAll {
+        $Script:ModuleFile = Join-Path $PSScriptRoot "..\pacwin.psm1"
         # Dot-sourcing the module file to access private functions for testing
-        . $ModuleFile
+        . "$Script:ModuleFile"
     }
 
     Context "Scoop Parser (_pw_parse_scoop_lines)" {
