@@ -26,7 +26,7 @@ Windows package management is fragmented. Users often have to remember different
 ## 5-Minute Quickstart
 
 1. **Verify you have a manager:** Ensure at least one of `winget`, `choco`, or `scoop` is in your PATH.
-2. **Launch PowerShell:** Open a PS 5.1 or PS 7+ terminal.
+2. **Launch PowerShell:** Open a PS 5.1 or PS 7+ terminal (**Run as Administrator** is required for Chocolatey/Winget).
 3. **Search for a package:**
 
    ```powershell

@@ -19,6 +19,8 @@ A high-performance universal package management layer for Windows.
 
 `pacwin` is a PowerShell-based abstraction layer designed for system administrators and power users who need to manage multiple Windows package managers (**winget**, **chocolatey**, **scoop**) through a single, consistent CLI. It adopts the Arch Linux `pacman` syntax to provide a streamlined, predictable experience while solving common issues like asynchronous output noise and cryptic exit codes.
 
+**Important**: Most operations involving **Chocolatey** and many **Winget** system-level installs require **Administrative privileges**. It is recommended to run `pacwin` from an elevated PowerShell session.
+
 ## 2. Core Concepts
 
 - **Manager Abstraction**: Code that wraps specific CLI tools into generic objects.
@@ -104,6 +106,7 @@ pacwin install vlc
 ## 8. Maintenance & Dependencies
 
 - **Dependencies**: PowerShell 5.1+ (Win10 Default) or PowerShell 7.2+.
+- **Privileges**: **Administrative privileges** are strongly recommended for Chocolatey and Winget system-wide operations. `pacwin` includes a detection helper (`_pw_is_admin`) to warn users when executing modification commands in a non-elevated session.
 - **Version Constraint**: Pester 3.4.0 (for legacy test support) or Pester 5.0+ (for modern dev).
 - **Maintenance Note**: Always prioritize ASCII characters for UI elements to maintain compatibility with legacy `conhost.exe`.
 

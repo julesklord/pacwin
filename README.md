@@ -4,7 +4,7 @@
   <img src="docs/logo_pacwin.png" width="300" alt="pacwin logo">
 </p>
 
-![Version](https://img.shields.io/badge/version-0.1.0-cyan)
+![Version](https://img.shields.io/badge/version-0.2.0-cyan)
 ![PowerShell](https://img.shields.io/badge/powershell-5.1%20%7C%207%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
@@ -26,7 +26,7 @@ Managing software on Windows typically requires interacting with three distinct 
 
 Get `pacwin` running in under 2 minutes:
 
-1. Open PowerShell (Administrator recommended for choco/winget).
+1. Open PowerShell (**Run as Administrator** - required for Chocolatey operations).
 2. Download and run the installer:
 
    ```powershell
@@ -112,7 +112,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ### Metadata
 
-- **Status**: Stable (v0.1.0)
+- **Status**: Stable (v0.2.0)
 - **Requirements**: Windows PowerShell 5.1 or PS 7.2+
 - **Maintainers**: pacwin core contributors
 - **Known issues**: Scoop searches can timeout if bucket metadata is stale; run `scoop update` to fix.

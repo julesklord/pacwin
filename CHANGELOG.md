@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-04-14
+
+### Added
+- **Feature `pin / hold`**: Freeze packages to prevent accidental updates.
+- **Feature `export / import`**: Backup and restore your entire package list to a JSON file.
+- **Feature `doctor`**: New environment diagnostic tool to check PS version, managers, and connectivity.
+* **Feature `sync`**: Detect cross-manager duplicates (e.g., same app installed via winget and choco).
+- **Tab Completion**: Intelligent autocompletion for commands, managers, and installed package IDs.
+- **PowerShell 5.1 Robustness**: Full compatibility fixes for legacy PowerShell versions (if-expressions, null-coalescing, and encoding).
+- **Admin Privilege Awareness**: Automated warnings when performing system-level actions (especially for Chocolatey) from non-elevated sessions.
+- **WhatIf Support**: Standard PowerShell `-WhatIf` support for safe command simulation.
+
+### Changed
+- **Documentation Overhaul**: Updated Wiki, README, and Technical Docs with new features and administrator requirements.
+- **Refactored `sync` logic**: Improved duplicate detection with name normalization.
+
+### Fixed
+- Syntax errors in `pacwin.psm1` preventing loading in PowerShell 5.1.
+- Character encoding corruption in UI elements for legacy consoles.
+- Scoop output parsing errors for non-string objects.
+
 ## [0.1.0] - 2026-04-09
 
 ### Added

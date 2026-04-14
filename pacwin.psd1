@@ -1,7 +1,7 @@
 @{
-    ModuleVersion     = '0.1.0'
+    ModuleVersion     = '0.2.0'
     RootModule        = 'pacwin.psm1'
-    Author            = 'jules'
+    Author            = 'julesklord'
     Description       = 'Universal package layer for Windows — winget + chocolatey + scoop'
     PowerShellVersion = '5.1'
     FunctionsToExport = @('pacwin')

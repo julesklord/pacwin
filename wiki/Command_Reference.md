@@ -12,8 +12,11 @@
 | **Update All**| `pacwin update` | `pacwin -Syu` |
 | **Update One**| `pacwin update <id>` | N/A |
 | **List Installed**| `pacwin list` | `pacwin -Q` |
-| **Outdated** | `pacwin outdated` | `pacwin -Qu` |
+| Outdated | `pacwin outdated` | `pacwin -Qu` |
 | **Info** | `pacwin info <id>` | `pacwin -Si <id>` |
+
+> [!IMPORTANT]
+> **Administrative Privileges**: Most operations that modify the system (install, uninstall, update, pin, import) require **Administrator privileges**, especially when using **Chocolatey** or system-level **Winget** sources.
 
 ## `pacwin search`
 

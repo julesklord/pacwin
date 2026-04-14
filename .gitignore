@@ -10,4 +10,4 @@ logs/
 bin/
 obj/
 .vscode/
-features.md
+docs/artifacts/

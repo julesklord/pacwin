@@ -6,13 +6,14 @@
 
 - **OS:** Windows 10 or Windows 11.
 - **Engine:** PowerShell 5.1 or PowerShell 7.2+.
+- **Privileges:** **Administrator privileges** are required for Chocolatey and system-wide Winget operations.
 - **Managers:** At least one of `winget`, `choco`, or `scoop` installed and available in `$env:PATH`.
 
 ## Installation Methods
 
 ### Method 1: Automated Script (Recommended)
 
-You can deploy `pacwin` directly from the remote repository using `curl`. This script will download the module and update your `$PROFILE` automatically.
+You can deploy `pacwin` directly from the remote repository using `curl`. This script will download the module and update your `$PROFILE` automatically. **Run this from an elevated (Administrator) PowerShell terminal.**
 
 ```powershell
 PS> curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | powershell -Command -
