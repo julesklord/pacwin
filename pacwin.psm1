@@ -602,7 +602,7 @@ function _pw_do_export {
     }
 
     _pw_color "  Collecting installed packages..." Cyan
-    $export = [ordered]@{ generated = (Get-Date -Format 'o'); packages = @() }
+    $export = [ordered]@{ generated = (Get-Date -Format 'o'); packages = [System.Collections.Generic.List[Object]]::new() }
 
     if ($managers["winget"]) {
         # winget export can be slow, we use --accept-source-agreements
@@ -610,9 +610,9 @@ function _pw_do_export {
         if ($raw.Sources) {
             foreach ($src in $raw.Sources) {
                 foreach ($pkg in $src.Packages) {
-                    $export.packages += [ordered]@{
+                    $export.packages.Add([ordered]@{
                         manager = "winget"; id = $pkg.PackageIdentifier
-                    }
+                    })
                 }
             }
         }
@@ -622,9 +622,9 @@ function _pw_do_export {
         foreach ($line in $raw) {
             $parts = $line -split "\|"
             if ($parts.Count -ge 1 -and $parts[0].Trim()) {
-                $export.packages += [ordered]@{
+                    $export.packages.Add([ordered]@{
                     manager = "choco"; id = $parts[0].Trim()
-                }
+                    })
             }
         }
     }
@@ -632,9 +632,9 @@ function _pw_do_export {
         $raw = scoop export 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
         if ($raw.apps) {
             foreach ($app in $raw.apps) {
-                $export.packages += [ordered]@{
+                    $export.packages.Add([ordered]@{
                     manager = "scoop"; id = $app.Name
-                }
+                    })
             }
         }
     }
