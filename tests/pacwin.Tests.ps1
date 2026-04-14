@@ -19,7 +19,7 @@ Describe "pacwin core logic" {
     function _pw_do_import {}
     function _pw_do_doctor {}
     function _pw_do_sync {}
-    function _pw_sanitize { param($input) return $input } # Basic pass-through for test
+    function _pw_sanitize { param($targetInput) return $targetInput } # Basic pass-through for test
     function _pw_filter_manager { param($m, $n) return $m }
 
     # Load ONLY the 'pacwin' function from the psm1 to test its dispatch logic
@@ -49,14 +49,14 @@ Describe "pacwin core logic" {
         Import-Module $ModuleFile -Force
         # Mocking is hard after Import-Module in PS5.1 + Pester 3.4
         # So we just verify it doesn't crash
-        pacwin doctor
+        pacwin doctor -Name "doctor"
         $true | Should Be $true
     }
 
     Context "Security & Sanitization" {
         It "Allows safe package IDs" {
             Import-Module $ModuleFile -Force
-            _pw_sanitize "google.chrome" | Should Be "google.chrome"
+            _pw_sanitize -targetInput "google.chrome" | Should Be "google.chrome"
         }
     }
 }
