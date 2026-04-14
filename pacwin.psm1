@@ -11,7 +11,7 @@ $ErrorActionPreference = "Continue"
 #region -- Security & Validation -----------------------------
 
 function _pw_sanitize {
-    param([string]$targetInput = "")
+    param([string]$targetInput)
     if (-not $targetInput) { return $null }
     if ($targetInput -match '^[a-zA-Z0-9\._\-@/]+$') {
         return $targetInput
@@ -48,6 +48,7 @@ function _pw_sep { _pw_color ("  " + ("-" * 68)) DarkGray }
 
 function _pw_exe {
     param([string]$name)
+    if (-not $name) { return $null }
     $cmd = Get-Command $name -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
     return $null
@@ -233,7 +234,7 @@ function _pw_search_all {
         } -ThrottleLimit 3
         
         foreach ($res in $jobResults) {
-            $lines = @(foreach ($item in $res.Raw) { "$item" })
+            $lines = @($res.Raw | ForEach-Object { "$_" })
             switch ($res.Key) {
                 "winget" { $parsed = _pw_parse_winget_lines $lines }
                 "choco"  { $parsed = _pw_parse_choco_lines  $lines }
@@ -263,7 +264,7 @@ function _pw_search_all {
             }
             if ($rs.AsyncResult.IsCompleted) {
                 $raw = $rs.PowerShell.EndInvoke($rs.AsyncResult)
-                $lines = @(foreach ($item in $raw) { "$item" })
+                $lines = @($raw | ForEach-Object { "$_" })
                 switch ($rs.Key) {
                     "winget" { $parsed = _pw_parse_winget_lines $lines }
                     "choco"  { $parsed = _pw_parse_choco_lines  $lines }
@@ -655,7 +656,7 @@ function _pw_do_import {
     _pw_color "  Importing $($data.packages.Count) packages from export..." Cyan
     _pw_sep
 
-    $failed = [System.Collections.Generic.List[string]]::new()
+    $failed = @()
     foreach ($pkg in $data.packages) {
         if (-not $managers[$pkg.manager]) {
             _pw_color "  [SKIP] $($pkg.id) - manager '$($pkg.manager)' not available." DarkGray
@@ -674,7 +675,7 @@ function _pw_do_import {
             "choco"  { $output = choco install $pkg.id -y 2>&1 }
             "scoop"  { $output = scoop install $pkg.id 2>&1 }
         }
-        if ($LASTEXITCODE -ne 0) { $failed.Add($pkg.id) }
+        if ($LASTEXITCODE -ne 0) { $failed += $pkg.id }
     }
 
     _pw_sep
@@ -788,7 +789,7 @@ function _pw_do_sync {
 
     if ($managers["winget"]) {
         $raw = winget list --accept-source-agreements 2>$null
-        $lines = @(foreach ($item in $raw) { "$item" })
+        $lines = @($raw | ForEach-Object { "$_" })
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $installed.Add($p) }
     }
@@ -952,7 +953,7 @@ function _pw_do_outdated {
     if ($managers["winget"]) {
         if (-not $Silent) { _pw_color "  -- winget -----------------------------" Cyan }
         $out = winget upgrade --accept-source-agreements 2>$null
-        $lines = @(foreach ($item in $out) { "$item" })
+        $lines = @($out | ForEach-Object { "$_" })
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $allResults.Add($p) }
     }
