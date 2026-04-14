@@ -11,7 +11,7 @@ $ErrorActionPreference = "Continue"
 #region -- Security & Validation -----------------------------
 
 function _pw_sanitize {
-    param([string]$targetInput)
+    param([string]$targetInput = "")
     if (-not $targetInput) { return $null }
     if ($targetInput -match '^[a-zA-Z0-9\._\-@/]+$') {
         return $targetInput
