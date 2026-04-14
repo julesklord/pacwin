@@ -2,7 +2,7 @@
 # Usage: curl -sSL <URL_TO_THIS_SCRIPT> | powershell -Command -
 
 # --- CONFIGURATION (Change this to your actual repository URL) ---
-$repoBaseUrl = "https://raw.githubusercontent.com/YOUR_USERNAME/pacwin/main"
+$repoBaseUrl = "https://raw.githubusercontent.com/julesklord/pacwin/main"
 $moduleName = "pacwin"
 $psm1Url = "$repoBaseUrl/pacwin.psm1"
 
