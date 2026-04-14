@@ -1,4 +1,5 @@
 # pacwin Tests (English, Pester 3.4.0 Robust version)
+$ModuleFile = Join-Path $PSScriptRoot "..\pacwin.psm1"
 
 Describe "pacwin core logic" {
     
@@ -19,7 +20,7 @@ Describe "pacwin core logic" {
     function _pw_do_import {}
     function _pw_do_doctor {}
     function _pw_do_sync {}
-    function _pw_sanitize { param($input) return $input } # Basic pass-through for test
+    function _pw_sanitize { param($targetInput) return $targetInput } # Basic pass-through for test
     function _pw_filter_manager { param($m, $n) return $m }
 
     # Load ONLY the 'pacwin' function from the psm1 to test its dispatch logic
@@ -30,7 +31,7 @@ Describe "pacwin core logic" {
     # Actually, the user wants to verify implementation in the CODE.
     
     # Try loading the module again but after the stubs.
-    $ModuleFile = Join-Path $PSScriptRoot "..\pacwin.psm1"
+
     $content = Get-Content $ModuleFile -Raw
     # Remove the existing helper definitions from the content we're about to load to avoid overriding our stubs?
     # No, Pester 3.4.0 is just limited.
@@ -49,14 +50,14 @@ Describe "pacwin core logic" {
         Import-Module $ModuleFile -Force
         # Mocking is hard after Import-Module in PS5.1 + Pester 3.4
         # So we just verify it doesn't crash
-        pacwin doctor
+        pacwin doctor -Name "doctor"
         $true | Should Be $true
     }
 
     Context "Security & Sanitization" {
         It "Allows safe package IDs" {
             Import-Module $ModuleFile -Force
-            _pw_sanitize "google.chrome" | Should Be "google.chrome"
+            _pw_sanitize -targetInput "google.chrome" | Should Be "google.chrome"
         }
     }
 }

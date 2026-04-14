@@ -1,0 +1,3 @@
+perf: Optimize array building in pacwin loops
+
+Replaced the array append (`+=`) operations in `pacwin.psm1` inside of `_pw_do_export` and `_pw_do_import` with instances of `[System.Collections.Generic.List[object]]` and `[System.Collections.Generic.List[string]]` respectively.
