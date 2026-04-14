@@ -233,7 +233,7 @@ function _pw_search_all {
         } -ThrottleLimit 3
         
         foreach ($res in $jobResults) {
-            $lines = @($res.Raw | ForEach-Object { "$_" })
+            $lines = @(foreach ($line in $res.Raw) { "$line" })
             switch ($res.Key) {
                 "winget" { $parsed = _pw_parse_winget_lines $lines }
                 "choco"  { $parsed = _pw_parse_choco_lines  $lines }
@@ -263,7 +263,7 @@ function _pw_search_all {
             }
             if ($rs.AsyncResult.IsCompleted) {
                 $raw = $rs.PowerShell.EndInvoke($rs.AsyncResult)
-                $lines = @($raw | ForEach-Object { "$_" })
+                $lines = @(foreach ($line in $raw) { "$line" })
                 switch ($rs.Key) {
                     "winget" { $parsed = _pw_parse_winget_lines $lines }
                     "choco"  { $parsed = _pw_parse_choco_lines  $lines }
@@ -788,7 +788,7 @@ function _pw_do_sync {
 
     if ($managers["winget"]) {
         $raw = winget list --accept-source-agreements 2>$null
-        $lines = @($raw | ForEach-Object { "$_" })
+        $lines = @(foreach ($line in $raw) { "$line" })
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $installed.Add($p) }
     }
@@ -952,7 +952,7 @@ function _pw_do_outdated {
     if ($managers["winget"]) {
         if (-not $Silent) { _pw_color "  -- winget -----------------------------" Cyan }
         $out = winget upgrade --accept-source-agreements 2>$null
-        $lines = @($out | ForEach-Object { "$_" })
+        $lines = @(foreach ($line in $out) { "$line" })
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $allResults.Add($p) }
     }
