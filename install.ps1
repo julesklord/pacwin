@@ -16,7 +16,7 @@ $destDir = if ($PSVersionTable.PSVersion.Major -ge 7) {
 
 Write-Host "Installing pacwin to: $destDir" -ForegroundColor Cyan
 
-if (-not (Test-Path $destDir)) { New-Object -ItemType Directory -Path $destDir -Force | Out-Null }
+if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
 Copy-Item $psm1Source (Join-Path $destDir "pacwin.psm1") -Force
 
 # Register in Current Profile
