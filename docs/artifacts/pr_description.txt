@@ -1,0 +1,3 @@
+💡 **What:** Fixed a CI failure where Pester 5 tests failed because `$ModuleFile` wasn't loaded in the proper scope, and `pacwin doctor -Name` was invalid.
+
+🎯 **Why:** Under Pester 5 rules, `Describe` blocks are executed during the discovery phase. As a result, variables defined inside the `Describe` block but outside of a `BeforeAll` or `It` block are not properly carried over to the run phase. This led to `$ModuleFile` evaluating to `$null`, breaking the `Import-Module` and dot-sourcing commands. Furthermore, one of the tests erroneously attempted to pass a `-Name` parameter to `pacwin doctor` when no such parameter exists. Fixing these ensures that the CI pipeline can safely evaluate testing logic.
