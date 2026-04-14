@@ -11,7 +11,7 @@ $ErrorActionPreference = "Continue"
 #region -- Security & Validation -----------------------------
 
 function _pw_sanitize {
-    param([string]$targetInput = "")
+    param([string]$targetInput)
     if (-not $targetInput) { return $null }
     if ($targetInput -match '^[a-zA-Z0-9\._\-@/]+$') {
         return $targetInput
@@ -233,7 +233,7 @@ function _pw_search_all {
         } -ThrottleLimit 3
         
         foreach ($res in $jobResults) {
-            $lines = @(foreach ($item in $res.Raw) { "$item" })
+            $lines = @($res.Raw | ForEach-Object { "$_" })
             switch ($res.Key) {
                 "winget" { $parsed = _pw_parse_winget_lines $lines }
                 "choco"  { $parsed = _pw_parse_choco_lines  $lines }
@@ -263,7 +263,7 @@ function _pw_search_all {
             }
             if ($rs.AsyncResult.IsCompleted) {
                 $raw = $rs.PowerShell.EndInvoke($rs.AsyncResult)
-                $lines = @(foreach ($item in $raw) { "$item" })
+                $lines = @($raw | ForEach-Object { "$_" })
                 switch ($rs.Key) {
                     "winget" { $parsed = _pw_parse_winget_lines $lines }
                     "choco"  { $parsed = _pw_parse_choco_lines  $lines }
@@ -602,7 +602,7 @@ function _pw_do_export {
     }
 
     _pw_color "  Collecting installed packages..." Cyan
-    $export = [ordered]@{ generated = (Get-Date -Format 'o'); packages = [System.Collections.Generic.List[Object]]::new() }
+    $export = [ordered]@{ generated = (Get-Date -Format 'o'); packages = @() }
 
     if ($managers["winget"]) {
         # winget export can be slow, we use --accept-source-agreements
@@ -610,9 +610,9 @@ function _pw_do_export {
         if ($raw.Sources) {
             foreach ($src in $raw.Sources) {
                 foreach ($pkg in $src.Packages) {
-                    $export.packages.Add([ordered]@{
+                    $export.packages += [ordered]@{
                         manager = "winget"; id = $pkg.PackageIdentifier
-                    })
+                    }
                 }
             }
         }
@@ -622,9 +622,9 @@ function _pw_do_export {
         foreach ($line in $raw) {
             $parts = $line -split "\|"
             if ($parts.Count -ge 1 -and $parts[0].Trim()) {
-                    $export.packages.Add([ordered]@{
+                $export.packages += [ordered]@{
                     manager = "choco"; id = $parts[0].Trim()
-                    })
+                }
             }
         }
     }
@@ -632,9 +632,9 @@ function _pw_do_export {
         $raw = scoop export 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
         if ($raw.apps) {
             foreach ($app in $raw.apps) {
-                    $export.packages.Add([ordered]@{
+                $export.packages += [ordered]@{
                     manager = "scoop"; id = $app.Name
-                    })
+                }
             }
         }
     }
@@ -788,7 +788,7 @@ function _pw_do_sync {
 
     if ($managers["winget"]) {
         $raw = winget list --accept-source-agreements 2>$null
-        $lines = @(foreach ($item in $raw) { "$item" })
+        $lines = @($raw | ForEach-Object { "$_" })
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $installed.Add($p) }
     }
@@ -952,7 +952,7 @@ function _pw_do_outdated {
     if ($managers["winget"]) {
         if (-not $Silent) { _pw_color "  -- winget -----------------------------" Cyan }
         $out = winget upgrade --accept-source-agreements 2>$null
-        $lines = @(foreach ($item in $out) { "$item" })
+        $lines = @($out | ForEach-Object { "$_" })
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $allResults.Add($p) }
     }

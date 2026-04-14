@@ -1,12 +1,11 @@
 # Parser Tests for pacwin
 
-$ModuleFile = Resolve-Path (Join-Path (Split-Path $PSScriptRoot) "pacwin.psm1") | Select-Object -ExpandProperty Path
+$ModuleFile = Join-Path $PSScriptRoot "..$([System.IO.Path]::DirectorySeparatorChar)pacwin.psm1"
 
 Describe "pacwin Parsers" {
     BeforeAll {
-        $Script:ModuleFile = Join-Path $PSScriptRoot "..\pacwin.psm1"
         # Dot-sourcing the module file to access private functions for testing
-        . "$Script:ModuleFile"
+        . $ModuleFile
     }
 
     Context "Scoop Parser (_pw_parse_scoop_lines)" {
