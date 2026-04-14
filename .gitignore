@@ -1,6 +1,10 @@
 # PowerShell backups
 *.bak.*
 *.bak
+.agents/
+.gemini/
+.snapshots/
+.vscode/
 
 # Temporary walkthroughs
 walkthrough_*.md
