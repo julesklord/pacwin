@@ -1,6 +1,6 @@
 # Parser Tests for pacwin
 
-$ModuleFile = Join-Path $PSScriptRoot "..$([System.IO.Path]::DirectorySeparatorChar)pacwin.psm1"
+$ModuleFile = "$PSScriptRoot/../pacwin.psm1"
 
 Describe "pacwin Parsers" {
     BeforeAll {

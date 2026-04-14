@@ -30,7 +30,7 @@ Describe "pacwin core logic" {
     # Actually, the user wants to verify implementation in the CODE.
     
     # Try loading the module again but after the stubs.
-    $ModuleFile = Join-Path $PSScriptRoot "..$([System.IO.Path]::DirectorySeparatorChar)pacwin.psm1"
+    $ModuleFile = "$PSScriptRoot/../pacwin.psm1"
     $content = Get-Content $ModuleFile -Raw
     # Remove the existing helper definitions from the content we're about to load to avoid overriding our stubs?
     # No, Pester 3.4.0 is just limited.
