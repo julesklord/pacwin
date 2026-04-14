@@ -655,7 +655,7 @@ function _pw_do_import {
     _pw_color "  Importing $($data.packages.Count) packages from export..." Cyan
     _pw_sep
 
-    $failed = @()
+    $failed = [System.Collections.Generic.List[string]]::new()
     foreach ($pkg in $data.packages) {
         if (-not $managers[$pkg.manager]) {
             _pw_color "  [SKIP] $($pkg.id) - manager '$($pkg.manager)' not available." DarkGray
@@ -674,7 +674,7 @@ function _pw_do_import {
             "choco"  { $output = choco install $pkg.id -y 2>&1 }
             "scoop"  { $output = scoop install $pkg.id 2>&1 }
         }
-        if ($LASTEXITCODE -ne 0) { $failed += $pkg.id }
+        if ($LASTEXITCODE -ne 0) { $failed.Add($pkg.id) }
     }
 
     _pw_sep
