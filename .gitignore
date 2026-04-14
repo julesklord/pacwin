@@ -1,10 +1,7 @@
 # PowerShell backups
 *.bak.*
 *.bak
-.agents/
-.gemini/
-.snapshots/
-.vscode/
+
 
 # Temporary walkthroughs
 walkthrough_*.md
@@ -15,3 +12,7 @@ bin/
 obj/
 .vscode/
 docs/artifacts/
+.agents/
+.gemini/
+.snapshots/
+.vscode/
