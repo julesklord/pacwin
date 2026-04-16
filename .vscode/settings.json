@@ -1,3 +1,10 @@
 {
-  "cSpell.words": ["absoluta", "antiguo", "asegurar", "aunque", "pacwin"]
+    "cSpell.words":  [
+                         "absoluta",
+                         "antiguo",
+                         "asegurar",
+                         "aunque",
+                         "pacwin"
+                     ],
+    "github-actions.remote-name":  "origin"
 }
