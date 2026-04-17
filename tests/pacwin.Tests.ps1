@@ -1,17 +1,24 @@
 # pacwin Tests (PowerShell Pester 5.x Optimized)
 
+param($ModulePath)
+
 BeforeAll {
-    # Resolve path to the module by searching upwards from the test directory
-    $current = $PSScriptRoot
-    $ModuleFile = $null
-    for ($i = 0; $i -lt 5; $i++) {
-        $candidate = Join-Path $current "pacwin.psm1"
-        if (Test-Path $candidate) {
-            $ModuleFile = Get-Item $candidate
-            break
+    # If ModulePath was passed via -Data, use it. Otherwise, search.
+    if ($null -ne $ModulePath -and (Test-Path $ModulePath)) {
+        $ModuleFile = Get-Item $ModulePath
+    }
+    else {
+        $current = $PSScriptRoot
+        $ModuleFile = $null
+        for ($i = 0; $i -lt 5; $i++) {
+            $candidate = Join-Path $current "pacwin.psm1"
+            if (Test-Path $candidate) {
+                $ModuleFile = Get-Item $candidate
+                break
+            }
+            $current = Split-Path $current -Parent
+            if (-not $current) { break }
         }
-        $current = Split-Path $current -Parent
-        if (-not $current) { break }
     }
 
     if ($null -eq $ModuleFile) {
