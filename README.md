@@ -1,16 +1,20 @@
 # pacwin
 
 <p align="center">
-  <img src="docs/logo_pacwin.png" width="300" alt="pacwin logo">
+  <img src="docs/logo_pacwin.png" width="800" alt="pacwin logo">
 </p>
 
-![Version](https://img.shields.io/badge/version-0.2.0-cyan)
+![Version](https://img.shields.io/badge/version-0.2.1-cyan)
 ![PowerShell](https://img.shields.io/badge/powershell-5.1%20%7C%207%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![Engine](https://img.shields.io/badge/engine-optimized-orange)
 
 Unify winget, chocolatey, and scoop under a fast, secure, pacman-like CLI for Windows.
+
+## Demo
+
+![pacwin demo](docs/demo.gif)
 
 ## Why it exists
 
@@ -55,6 +59,7 @@ Get `pacwin` running in under 2 minutes:
 - **Smart Result Picker**: Interactive source selection when a package exists in multiple repositories.
 - **Error Interpretation**: Real-time analysis of installer output to detect reboots or missing manifests.
 - **Security Sanitization**: Regex-based input validation to block command injection.
+- **Support for `-WhatIf`**: Native PowerShell integration to simulate operations before execution.
 - **Low-Resource Engine**: Automatically switches to thread-based execution (Runspaces) in PS 5.1 and Parallel loops in PS 7.
 
 ## Installation
@@ -83,6 +88,9 @@ curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps
 | **Update** | `pacwin update [id]` | `pacwin -Syu` |
 | **List Installed** | `pacwin list` | `pacwin -Q` |
 | **Check Outdated**| `pacwin outdated` | `pacwin -Qu` |
+| **Hold (Pin)** | `pacwin hold <id>` | `pacwin pin <id>` |
+| **Health Check** | `pacwin doctor` | `pacwin check` |
+| **Deduplicate** | `pacwin sync` | `pacwin dupes` |
 
 ### Identifying Sources
 
@@ -101,7 +109,12 @@ pacwin search nodejs -Manager scoop
 ## Contributing
 
 1. **Reporting Issues**: Use the GitHub issue tracker.
-2. **Testing**: Run `Invoke-Pester .\tests\pacwin.Tests.ps1` to verify security and logic changes.
+2. **Testing**: Run the test suite using the bundled Pester 5 engine:
+   ```powershell
+   # Use the local Pester module to avoid version conflicts
+   Import-Module ./tests/modules/Pester
+   Invoke-Pester ./tests/pacwin.Tests.ps1
+   ```
 3. **Internal Functions**: All core logic resides in `_pw_` prefixed functions to avoid polluting your global namespace.
 
 ## License
@@ -112,7 +125,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ### Metadata
 
-- **Status**: Stable (v0.2.0)
+- **Status**: Stable (v0.2.1)
 - **Requirements**: Windows PowerShell 5.1 or PS 7.2+
 - **Maintainers**: pacwin core contributors
 - **Known issues**: Scoop searches can timeout if bucket metadata is stale; run `scoop update` to fix.

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-04-17
+
+### Added
+- **Pro Header & Dashboard**: Premium ASCII banner with real-time manager presence indicators.
+- **Categorized Help UI**: More intuitive, professional, and color-coded help menu.
+- **Scripting Support**: New `-NoHeader` switch to suppress banner in non-interactive scripts and pipes.
+- **Dynamic Documentation**: High-speed, fluid VHS-recorded demo integration.
+
+### Fixed
+- **Winget Parsing Engine**: Robust cleanup of help/usage output that previously polluted search results.
+- **Command Completion**: Register-ArgumentCompleter now includes all advanced commands (`hold`, `sync`, `dupes`).
+- **Uninstall Precision**: Winget uninstallation now uses `--id` to ensure unique package removal.
+
 ## [0.2.0] - 2026-04-14
 
 ### Added

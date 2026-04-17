@@ -67,4 +67,30 @@ PS> pacwin update vlc
 `pacwin` will silently check outdated packages (`pacwin -Qu -Silent`) to find which manager owns `vlc` and requires the update, then executes the target upgrade automatically.
 
 ---
-**Next:** [Troubleshooting](05-TROUBLESHOOTING.md)
+
+## Scenario 6: Simulate Operations with -WhatIf
+
+If you are unsure of what a command will do (especially uninstalls or global updates), use the standard PowerShell `-WhatIf` flag.
+
+```powershell
+PS> pacwin install nodejs -WhatIf
+  What if: Performing the operation "Installing nodejs" on target "winget".
+```
+
+## Scenario 7: Pinning Packages (Hold)
+
+Prevent a package from being updated during `pacwin update` by "holding" it.
+
+```powershell
+PS> pacwin hold "vscode" -Manager winget
+  -> Pinning 'vscode' with winget ...
+```
+
+To list all current pins:
+
+```powershell
+PS> pacwin hold
+```
+
+---
+**Next:** [FAQ](FAQ.md)

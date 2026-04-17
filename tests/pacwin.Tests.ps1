@@ -1,77 +1,68 @@
-# pacwin Tests (English, Pester 3.4.0 Robust version)
+# pacwin Tests (PowerShell Pester 5.x Optimized)
 
-function Resolve-ModuleFile {
-    $candidates = @(
-        (Join-Path $PSScriptRoot "..\pacwin.psm1"),
-        (Join-Path $PSScriptRoot "..\scratch\pacwin.psm1")
-    )
-
-    foreach ($candidate in $candidates) {
-        if (Test-Path $candidate) {
-            return (Resolve-Path $candidate).Path
-        }
+BeforeAll {
+    $ModuleFile = Join-Path $PSScriptRoot "..\pacwin.psm1"
+    if (-not (Test-Path $ModuleFile)) {
+        throw "Unable to locate pacwin.psm1 at $ModuleFile"
     }
-
-    throw "Unable to locate pacwin.psm1 from tests."
+    Import-Module $ModuleFile -Force
 }
 
 Describe "pacwin core logic" {
     
-    # Define stubs INSIDE Describe to allow Mocks to work
-    # We define THEM as actual functions here, and then pacwin (if not mocked) will call them.
-    # If we want to test pacwin's logic, we only need to mock the called functions.
+    BeforeEach {
+        # Global mocks to prevent side effects
+        Mock -ModuleName pacwin _pw_is_admin { return $true }
+        Mock -ModuleName pacwin _pw_detect_managers { return @{ winget = "winget.exe"; choco = "choco.exe" } }
+        Mock -ModuleName pacwin _pw_color { param($text, $color, $NoNewline) }
+        Mock -ModuleName pacwin _pw_header { param($title) }
+    }
 
-    function _pw_color {}
-    function _pw_header {}
-    function _pw_detect_managers {}
-    function _pw_search_all {}
-    function _pw_pick_source {}
-    function _pw_do_install {}
-    function _pw_handle_result {}
-    function _pw_do_pin {}
-    function _pw_do_pin_list {}
-    function _pw_do_export {}
-    function _pw_do_import {}
-    function _pw_do_doctor {}
-    function _pw_do_sync {}
-    function _pw_sanitize { param($input) return $input } # Basic pass-through for test
-    function _pw_filter_manager { param($m, $n) return $m }
+    It "Can run pacwin doctor without real environment checks" {
+        Mock -ModuleName pacwin _pw_do_doctor { param($mgrs) }
+        
+        $null = pacwin doctor
+        
+        Assert-MockCalled _pw_do_doctor -ModuleName pacwin -Times 1 -Exactly
+    }
 
-    # Load ONLY the 'pacwin' function from the psm1 to test its dispatch logic
-    # But since we can't easily extract just one function, we'll re-define the dispatch logic
-    # Or just use the one from the file but ensure we DON'T override the stubs.
-    
-    # Let's just define a minimal pacwin for dispatch testing if the file-loading is too hard.
-    # Actually, the user wants to verify implementation in the CODE.
-    
-    # Try loading the module again but after the stubs.
-    $ModuleFile = Resolve-ModuleFile
-    $content = Get-Content $ModuleFile -Raw
-    # Remove the existing helper definitions from the content we're about to load to avoid overriding our stubs?
-    # No, Pester 3.4.0 is just limited.
-    
-    # Let's try this: Load the module in a child scope or just trust the manual verification I did.
-    # The user asked: "revisa que esto este implementado en el codigo tambien revisa que todo ejecute bien y si esta todo implementado correctamente"
-    
-    # I have verified:
-    # 1. Implementation is present in pacwin.psm1.
-    # 2. Module loads without errors (after my fixes).
-    # 3. Tab completion is registered.
-    
-    # Let's do a REAL test call to the loaded module to verify dispatching works for 'doctor'.
-    It "Can load the module and run pacwin doctor (Mocked)" {
-        # This test will run in the current session where we can import the module
-        Import-Module $ModuleFile -Force
-        # Mocking is hard after Import-Module in PS5.1 + Pester 3.4
-        # So we just verify it doesn't crash
-        pacwin doctor
-        $true | Should Be $true
+    It "Supports standard PowerShell -WhatIf" {
+        Mock -ModuleName pacwin _pw_search_all { return @([PSCustomObject]@{ Name="test"; ID="test"; Version="1.0"; Source="winget"; Manager="winget" }) }
+        Mock -ModuleName pacwin _pw_pick_source { param($candidates) return $candidates[0] }
+        Mock -ModuleName pacwin _pw_do_install { 
+            [CmdletBinding(SupportsShouldProcess)]
+            param($pkg) 
+        }
+        
+        { pacwin install "testpkg" -WhatIf } | Should -Not -Throw
     }
 
     Context "Security & Sanitization" {
         It "Allows safe package IDs" {
-            $module = Import-Module $ModuleFile -Force -PassThru
-            & $module { _pw_sanitize "google.chrome" } | Should Be "google.chrome"
+            InModuleScope pacwin {
+                _pw_sanitize "google.chrome" | Should -Be "google.chrome"
+            }
+        }
+
+        It "Blocks dangerous input" {
+            InModuleScope pacwin {
+                _pw_sanitize "bad; comando" | Should -Be $null
+            }
+        }
+    }
+
+    Context "Command Dispatcher" {
+        It "Recognizes new commands like 'hold' or 'sync'" {
+            Mock -ModuleName pacwin _pw_do_pin { param($id, $mgr, $Unpin) }
+            Mock -ModuleName pacwin _pw_do_sync { param($managers) }
+            
+            # Test 'hold' (pin)
+            $null = pacwin hold "test" -Manager winget
+            Assert-MockCalled _pw_do_pin -ModuleName pacwin -ParameterFilter { $id -eq "test" }
+            
+            # Test 'sync'
+            $null = pacwin sync
+            Assert-MockCalled _pw_do_sync -ModuleName pacwin -Times 1 -Exactly
         }
     }
 }

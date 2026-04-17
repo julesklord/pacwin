@@ -42,6 +42,12 @@ PS> pacwin status
   * winget -> C:\Users\user\AppData\Local\Microsoft\WindowsApps\winget.exe
   * choco -> C:\ProgramData\chocolatey\bin\choco.exe
   * scoop -> C:\Users\user\scoop\shims\scoop.ps1
+
+You should also run the health check:
+
+```powershell
+PS> pacwin doctor
+```
 ```
 
 > [!WARNING]
