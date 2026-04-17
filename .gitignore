@@ -18,3 +18,8 @@ docs/artifacts/
 .vscode/
 pacwin.code-workspace
 workflows/
+CLAUDE.md
+.claude/
+.cursor/
+.gemini/
+.vibecheck/
