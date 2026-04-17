@@ -1,5 +1,20 @@
 # pacwin Tests (English, Pester 3.4.0 Robust version)
 
+function Resolve-ModuleFile {
+    $candidates = @(
+        (Join-Path $PSScriptRoot "..\pacwin.psm1"),
+        (Join-Path $PSScriptRoot "..\scratch\pacwin.psm1")
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+
+    throw "Unable to locate pacwin.psm1 from tests."
+}
+
 Describe "pacwin core logic" {
     
     # Define stubs INSIDE Describe to allow Mocks to work
@@ -30,7 +45,7 @@ Describe "pacwin core logic" {
     # Actually, the user wants to verify implementation in the CODE.
     
     # Try loading the module again but after the stubs.
-    $ModuleFile = "$PSScriptRoot/../pacwin.psm1"
+    $ModuleFile = Resolve-ModuleFile
     $content = Get-Content $ModuleFile -Raw
     # Remove the existing helper definitions from the content we're about to load to avoid overriding our stubs?
     # No, Pester 3.4.0 is just limited.
@@ -55,8 +70,8 @@ Describe "pacwin core logic" {
 
     Context "Security & Sanitization" {
         It "Allows safe package IDs" {
-            Import-Module $ModuleFile -Force
-            _pw_sanitize "google.chrome" | Should Be "google.chrome"
+            $module = Import-Module $ModuleFile -Force -PassThru
+            & $module { _pw_sanitize "google.chrome" } | Should Be "google.chrome"
         }
     }
 }

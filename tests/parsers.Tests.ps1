@@ -1,6 +1,21 @@
 # Parser Tests for pacwin
 
-$ModuleFile = "$PSScriptRoot/../pacwin.psm1"
+function Resolve-ModuleFile {
+    $candidates = @(
+        (Join-Path $PSScriptRoot "..\pacwin.psm1"),
+        (Join-Path $PSScriptRoot "..\scratch\pacwin.psm1")
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+
+    throw "Unable to locate pacwin.psm1 from tests."
+}
+
+$ModuleFile = Resolve-ModuleFile
 
 Describe "pacwin Parsers" {
     BeforeAll {
