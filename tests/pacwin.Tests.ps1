@@ -1,17 +1,23 @@
 # pacwin Tests (PowerShell Pester 5.x Optimized)
 
 BeforeAll {
-    # Resolve path to the module relative to the test file
-    $ModuleFile = Resolve-Path (Join-Path $PSScriptRoot "..\pacwin.psm1") -ErrorAction SilentlyContinue
-    if ($null -eq $ModuleFile) {
-        # Fallback for some CI environments where .. might resolve differently
-        $ModuleFile = Resolve-Path (Join-Path (Get-Item $PSScriptRoot).Parent.FullName "pacwin.psm1") -ErrorAction SilentlyContinue
+    # Resolve path to the module by searching upwards from the test directory
+    $current = $PSScriptRoot
+    $ModuleFile = $null
+    for ($i = 0; $i -lt 5; $i++) {
+        $candidate = Join-Path $current "pacwin.psm1"
+        if (Test-Path $candidate) {
+            $ModuleFile = Get-Item $candidate
+            break
+        }
+        $current = Split-Path $current -Parent
+        if (-not $current) { break }
     }
-    
+
     if ($null -eq $ModuleFile) {
-        throw "Unable to locate pacwin.psm1. PSScriptRoot: $PSScriptRoot"
+        throw "Unable to locate pacwin.psm1. Search started at: $PSScriptRoot"
     }
-    Import-Module $ModuleFile.Path -Force
+    Import-Module $ModuleFile.FullName -Force
 }
 
 Describe "pacwin core logic" {
