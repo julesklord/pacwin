@@ -14,5 +14,7 @@ jobs:
     - name: Run Pester tests
       shell: pwsh
       run: |
-        Import-Module ./tests/modules/Pester/Pester.psm1 -Force
+        $pesterPath = Resolve-Path "./tests/modules/Pester"
+        $env:PSModulePath = "$pesterPath;$env:PSModulePath"
+        Import-Module Pester -Force -MinimumVersion 5.0
         Invoke-Pester -Path ./tests -Output Detailed
