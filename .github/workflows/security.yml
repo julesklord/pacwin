@@ -1,5 +1,7 @@
 ﻿name: Security Scan
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   gitleaks:
     runs-on: ubuntu-latest
