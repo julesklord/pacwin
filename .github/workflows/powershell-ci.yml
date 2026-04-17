@@ -1,4 +1,4 @@
-﻿name: PowerShell CI
+name: PowerShell CI
 on:
   push:
     branches: [ main ]
@@ -13,4 +13,6 @@ jobs:
     - uses: actions/checkout@v4
     - name: Run Pester tests
       shell: pwsh
-      run: Invoke-Pester -Path ./tests -Output Detailed
+      run: |
+        Import-Module ./tests/modules/Pester/Pester.psm1 -Force
+        Invoke-Pester -Path ./tests -Output Detailed
