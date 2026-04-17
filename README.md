@@ -12,7 +12,10 @@
 
 Unify winget, chocolatey, and scoop under a fast, secure, pacman-like CLI for Windows.
 
-## Demo
+- **🚀 Concurrent Performance**: Multi-threaded engine for snappy package operations.
+- **✨ Premium UI**: Real-time status indicators and polished ASCII dashboard.
+- **🤖 Scripting Ready**: Silent modes and header suppression (`-NoHeader`) for CI/CD.
+- **🛡️ Intelligent Parsing**: Precise conflict resolution and exit-code interpretation.
 
 ![pacwin demo](docs/demo.gif)
 
@@ -26,7 +29,13 @@ Managing software on Windows typically requires interacting with three distinct 
 - Interpreting **cryptic exit codes** (like 3010 or 0x8A15002E) into clear status messages.
 - Using a **Hybrid Engine** (Runspaces/Threads) to execute searches in parallel without spiking CPU usage.
 
-## Quick start
+## Quick start and installltion
+
+### Automated Install (via curl)
+
+```powershell
+curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | powershell -Command -
+```
 
 Get `pacwin` running in under 2 minutes:
 
@@ -70,12 +79,6 @@ Get `pacwin` running in under 2 minutes:
 - **PowerShell 5.1** or **PowerShell 7+**
 - (Optional) `winget`, `choco`, or `scoop` (at least one must be in your PATH).
 
-### Automated Install (via curl)
-
-```powershell
-curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | powershell -Command -
-```
-
 ## Usage
 
 ### Common Commands
@@ -110,11 +113,13 @@ pacwin search nodejs -Manager scoop
 
 1. **Reporting Issues**: Use the GitHub issue tracker.
 2. **Testing**: Run the test suite using the bundled Pester 5 engine:
+
    ```powershell
    # Use the local Pester module to avoid version conflicts
    Import-Module ./tests/modules/Pester
    Invoke-Pester ./tests/pacwin.Tests.ps1
    ```
+
 3. **Internal Functions**: All core logic resides in `_pw_` prefixed functions to avoid polluting your global namespace.
 
 ## License

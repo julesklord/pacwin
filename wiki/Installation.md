@@ -1,6 +1,6 @@
 # Installation Guide
 
-**Updated:** 2026-04-10 | **Read time:** 2 min | **Difficulty:** Beginner
+**Updated:** 2026-04-17 | **Read time:** 2 min | **Difficulty:** Beginner
 
 ## Prerequisites
 
@@ -35,9 +35,9 @@ After installation, restart your PowerShell session or dot-source your profile. 
 
 ```powershell
 PS> pacwin status
-  +--------------------------------------+
-  |   pacwin  -  universal pkg layer     |
-  +--------------------------------------+
+  >> pacwin v0.2.1  --  universal package layer
+  [ winget + | choco + | scoop + ]
+  ================================================
   Detected Managers:
   * winget -> C:\Users\user\AppData\Local\Microsoft\WindowsApps\winget.exe
   * choco -> C:\ProgramData\chocolatey\bin\choco.exe
@@ -48,6 +48,7 @@ You should also run the health check:
 ```powershell
 PS> pacwin doctor
 ```
+
 ```
 
 > [!WARNING]

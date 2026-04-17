@@ -1,6 +1,6 @@
 # Troubleshooting
 
-**Updated:** 2026-04-10 | **Read time:** 3 min | **Difficulty:** Advanced
+**Updated:** 2026-04-17 | **Read time:** 3 min | **Difficulty:** Advanced
 
 This guide focuses on resolving symptoms you might encounter while using `pacwin`.
 

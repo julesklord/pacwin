@@ -1,6 +1,6 @@
 # Command Reference
 
-**Updated:** 2026-04-10 | **Read time:** 5 min | **Difficulty:** Intermediate
+**Updated:** 2026-04-17 | **Read time:** 5 min | **Difficulty:** Intermediate
 
 `pacwin` commands can be used with explicit verbs or `pacman` shorthand flags.
 
@@ -13,7 +13,17 @@
 | **Update One**| `pacwin update <id>` | N/A |
 | **List Installed**| `pacwin list` | `pacwin -Q` |
 | Outdated | `pacwin outdated` | `pacwin -Qu` |
-| **Info** | `pacwin info <id>` | `pacwin -Si <id>` |
+| **Export** | `pacwin export <path>` | N/A |
+| **Status** | `pacwin status` | N/A |
+
+## Global Flags
+
+| Flag | Description |
+| :--- | :--- |
+| `-Manager <name>` | Force operation on a specific manager (`winget`, `choco`, `scoop`). |
+| `-Limit <int>` | Limit search results (default: 40). |
+| `-NoHeader` | Suppresses the ASCII banner and indicators (ideal for scripting). |
+| `-WhatIf` | Standard PowerShell dry-run flag. |
 
 > [!IMPORTANT]
 > **Administrative Privileges**: Most operations that modify the system (install, uninstall, update, pin, import) require **Administrator privileges**, especially when using **Chocolatey** or system-level **Winget** sources.
@@ -27,11 +37,12 @@ Finds packages matching a query across all detected managers. It utilizes an opt
 ```powershell
 PS> pacwin search nodejs
   > Searching for 'nodejs'...
-  #    Name           ID             Version      Source
-  ----------------------------------------------------------
-  [1 ] Node.js        OpenJS.NodeJS  20.12.2      winget
-  [2 ] nodejs         nodejs         21.7.2       chocolatey
-  [3 ] nodejs         nodejs         20.12.0      scoop
+
+  #    Name                                 ID                      Version        Source
+  --------------------------------------------------------------------------------------------
+  [1 ] Node.js                              OpenJS.NodeJS           20.12.2        winget
+  [2 ] nodejs                               nodejs                  21.7.2         chocolatey
+  [3 ] nodejs                               nodejs                  20.12.0        scoop
 ```
 
 ## `pacwin install`
@@ -72,9 +83,24 @@ PS> pacwin update
 
 ```powershell
 PS> pacwin update vlc
-  Looking for update candidates for 'vlc'...
+  Looking for candidates for 'vlc'...
   Searching in outdated packages...
-  -> Updating 'vlc' with winget ...
+  -> Updating 'vlc' [winget] ...
+  ...
+```
+
+## Global Update
+
+```powershell
+PS> pacwin update
+```
+
+Triggering concurrent updates:
+
+- `winget upgrade --all`
+- `choco upgrade all`
+- `scoop update *`
+
 ```
 
 ## `pacwin uninstall`

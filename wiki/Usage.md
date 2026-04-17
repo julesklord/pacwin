@@ -1,6 +1,6 @@
 # Usage Patterns
 
-**Updated:** 2026-04-10 | **Read time:** 4 min | **Difficulty:** Intermediate
+**Updated:** 2026-04-17 | **Read time:** 4 min | **Difficulty:** Intermediate
 
 Here are 5 real-world scenarios where `pacwin` shines.
 
