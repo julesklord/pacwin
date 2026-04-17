@@ -16,3 +16,4 @@ docs/artifacts/
 .gemini/
 .snapshots/
 .vscode/
+pacwin.code-workspace
