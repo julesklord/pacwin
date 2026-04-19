@@ -13,7 +13,7 @@
 Unify winget, chocolatey, and scoop under a fast, secure, pacman-like CLI for Windows.
 
 - **🚀 Concurrent Performance**: Multi-threaded engine for snappy package operations.
-- **✨ Premium UI**: Real-time status indicators and polished ASCII dashboard.
+- **✨ Rich Terminal based UI**: Real-time status indicators and polished ASCII dashboard.
 - **🤖 Scripting Ready**: Silent modes and header suppression (`-NoHeader`) for CI/CD.
 - **🛡️ Intelligent Parsing**: Precise conflict resolution and exit-code interpretation.
 
