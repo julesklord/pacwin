@@ -7,32 +7,46 @@ if (-not (Test-Path $psm1Source)) {
     exit 1
 }
 
-# Determine Module Path (PowerShell 7 vs 5.1)
-$destDir = if ($PSVersionTable.PSVersion.Major -ge 7) {
-    Join-Path $HOME "Documents\PowerShell\Modules\$moduleName"
-} else {
-    Join-Path $HOME "Documents\WindowsPowerShell\Modules\$moduleName"
+# Determine Base Documents Path (Handles redirected folders like F:\Documents)
+$docsPath = [Environment]::GetFolderPath("MyDocuments")
+
+# Determine Module Paths (Register in both for compatibility)
+$destDirs = @(
+    (Join-Path $docsPath "WindowsPowerShell\Modules\$moduleName"),
+    (Join-Path $docsPath "PowerShell\Modules\$moduleName")
+)
+
+foreach ($destDir in $destDirs) {
+    if (-not (Test-Path (Split-Path $destDir))) { continue } # Skip if shell base dir doesn't exist
+
+    Write-Host "Installing pacwin to: $destDir" -ForegroundColor Cyan
+    if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+    Copy-Item $psm1Source (Join-Path $destDir "pacwin.psm1") -Force
 }
 
-Write-Host "Installing pacwin to: $destDir" -ForegroundColor Cyan
+# Register in all detected profiles (PS 5.1 and PS 7+)
+$potentialProfiles = @(
+    $PROFILE, # Current shell
+    (Join-Path $docsPath "WindowsPowerShell\Microsoft.PowerShell_profile.ps1"),
+    (Join-Path $docsPath "PowerShell\Microsoft.PowerShell_profile.ps1")
+) | Select-Object -Unique
 
-if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
-Copy-Item $psm1Source (Join-Path $destDir "pacwin.psm1") -Force
+foreach ($pPath in $potentialProfiles) {
+    if (-not (Test-Path (Split-Path $pPath))) { continue } # Skip if parent dir doesn't exist
 
-# Register in Current Profile
-$profilePath = $PROFILE
-if (-not (Test-Path $profilePath)) {
-    New-Object -ItemType File -Path $profilePath -Force | Out-Null
-    Write-Host "Created new profile at: $profilePath" -ForegroundColor Gray
-}
+    if (-not (Test-Path $pPath)) {
+        New-Item -ItemType File -Path $pPath -Force | Out-Null
+        Write-Host "Created new profile at: $pPath" -ForegroundColor Gray
+    }
 
-$importCmd = "Import-Module $moduleName"
-$profileContent = Get-Content $profilePath -ErrorAction SilentlyContinue
-if ($profileContent -notcontains $importCmd) {
-    Add-Content $profilePath "`n# pacwin - Universal Package Layer`n$importCmd"
-    Write-Host "Added 'Import-Module $moduleName' to your profile." -ForegroundColor Green
-} else {
-    Write-Host "pacwin is already registered in your profile." -ForegroundColor Yellow
+    $importCmd = "Import-Module $moduleName"
+    $profileContent = Get-Content $pPath -ErrorAction SilentlyContinue
+    if ($profileContent -notcontains $importCmd) {
+        Add-Content $pPath "`n# pacwin - Universal Package Layer`n$importCmd"
+        Write-Host "Added 'Import-Module $moduleName' to profile: $pPath" -ForegroundColor Green
+    } else {
+        Write-Host "pacwin is already registered in: $pPath" -ForegroundColor Yellow
+    }
 }
 
 Write-Host "`nInstallation Complete! Restart your shell or run: . `$PROFILE" -ForegroundColor Cyan

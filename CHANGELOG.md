@@ -5,15 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-04-21
+### Fixed
+- Hardened `pacwin.psd1` for PowerShell Gallery compatibility (fixed "Cannot index into a null array" error).
+- Added `FileList` to module manifest to ensure clean deployments.
+- Fixed variable interpolation bug in `self-update` error handler.
+- Improved manifest compatibility with older versions of PowerShellGet.
+
+## [0.2.3] - 2026-04-21
+
+### Added
+
+- **Premium Spinner UI**: Real-time progress indicator for parallel searches, showing the status of each manager individually (`[√]`, `[/]`, etc.).
+- **Unified Concurrency Engine**: Replaced separate PS5/PS7 search logic with a robust, high-performance RunspacePool implementation for better stability and UI control.
+- **Self-Update Command**: Added a built-in mechanism to update `pacwin` automatically from GitHub or via Git.
+- **Improved UX**: Visual feedback now prevents the appearance of a "stuck" terminal during long searches, and the help menu has been expanded.
+
+## [0.2.2] - 2026-04-21
+
+### Added
+
+- **Global Search Timeout**: New `-Timeout` parameter to control the maximum wait time for parallel searches.
+- **Improved Error Transparency**: Replaced silent error suppression with detailed reporting for manager failures and export operations.
+
+### Changed
+
+- **Language-Agnostic Winget Parser**: Refactored the Winget parser to work across all Windows locales by dynamically detecting column offsets.
+- **Centralized Logic**: Unified parsing logic for `sync` and `outdated` commands to ensure consistency and reliability.
+
 ## [0.2.1] - 2026-04-17
 
 ### Added
+
 - **Pro Header & Dashboard**: Premium ASCII banner with real-time manager presence indicators.
 - **Categorized Help UI**: More intuitive, professional, and color-coded help menu.
 - **Scripting Support**: New `-NoHeader` switch to suppress banner in non-interactive scripts and pipes.
 - **Dynamic Documentation**: High-speed, fluid VHS-recorded demo integration.
 
 ### Fixed
+
 - **Winget Parsing Engine**: Robust cleanup of help/usage output that previously polluted search results.
 - **Command Completion**: Register-ArgumentCompleter now includes all advanced commands (`hold`, `sync`, `dupes`).
 - **Uninstall Precision**: Winget uninstallation now uses `--id` to ensure unique package removal.
@@ -21,20 +51,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2026-04-14
 
 ### Added
+
 - **Feature `pin / hold`**: Freeze packages to prevent accidental updates.
 - **Feature `export / import`**: Backup and restore your entire package list to a JSON file.
 - **Feature `doctor`**: New environment diagnostic tool to check PS version, managers, and connectivity.
-* **Feature `sync`**: Detect cross-manager duplicates (e.g., same app installed via winget and choco).
+- **Feature `sync`**: Detect cross-manager duplicates (e.g., same app installed via winget and choco).
 - **Tab Completion**: Intelligent autocompletion for commands, managers, and installed package IDs.
 - **PowerShell 5.1 Robustness**: Full compatibility fixes for legacy PowerShell versions (if-expressions, null-coalescing, and encoding).
 - **Admin Privilege Awareness**: Automated warnings when performing system-level actions (especially for Chocolatey) from non-elevated sessions.
 - **WhatIf Support**: Standard PowerShell `-WhatIf` support for safe command simulation.
 
 ### Changed
+
 - **Documentation Overhaul**: Updated Wiki, README, and Technical Docs with new features and administrator requirements.
 - **Refactored `sync` logic**: Improved duplicate detection with name normalization.
 
 ### Fixed
+
 - Syntax errors in `pacwin.psm1` preventing loading in PowerShell 5.1.
 - Character encoding corruption in UI elements for legacy consoles.
 - Scoop output parsing errors for non-string objects.
@@ -68,4 +101,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reinforced input sanitization logic in `_pw_sanitize`.
 
 ---
-*Release v0.1.0*
+
+_Release v0.1.0_

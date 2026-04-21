@@ -43,7 +43,7 @@ function _pw_header {
     _pw_color ""
     _pw_color "  >> " Cyan -NoNewline
     _pw_color "pacwin" White -NoNewline
-    _pw_color " v0.2.1" DarkGray -NoNewline
+    _pw_color " v0.2.4" DarkGray -NoNewline
     _pw_color "  --  " DarkGray -NoNewline
     _pw_color "universal package layer" Gray
 
@@ -125,13 +125,16 @@ function _pw_filter_manager {
 function _pw_parse_winget_lines {
     param([string[]]$lines)
     $results = [System.Collections.Generic.List[PSCustomObject]]::new()
-    $headerLine = $lines | Where-Object { $_ -match "^Name\s+Id\s+Version" } | Select-Object -First 1
-
-    if (-not $headerLine) {
+    
+    # 1. Identify the header/separator structure
+    $separatorLine = $lines | Where-Object { $_ -match "^-{5,}" } | Select-Object -First 1
+    
+    if (-not $separatorLine) {
+        # Fallback: Heuristic split if no separator is found
         foreach ($line in $lines) {
-            # Skip progress bars, speeds, and headers/help flags
-            if ($line -match "^\s*$|^-{3,}|^Name\s|^-|[^\x00-\x7F]|%|[\d.]+\s+[KMG]B\s*/") { continue }
-            $parts = ($line -split "\s{2,}").Where({ $_ -ne "" })
+            # Skip progress bars, empty lines, and header-like lines
+            if ($line -match "^\s*$|^-{3,}|[^\x00-\x7F]|%|[\d.]+\s+[KMG]B\s*/") { continue }
+            $parts = ($line.Trim() -split "\s{2,}").Where({ $_ -ne "" })
             if ($parts.Count -ge 2) {
                 $results.Add([PSCustomObject]@{
                         Name    = $parts[0].Trim()
@@ -145,23 +148,67 @@ function _pw_parse_winget_lines {
         return $results
     }
 
-    $nameOff = $headerLine.IndexOf("Name")
-    $idOff = $headerLine.IndexOf("Id")
-    $versionOff = $headerLine.IndexOf("Version")
-    $sourceOff = $headerLine.IndexOf("Source")
+    # 2. Extract offsets from the separator line (e.g., "--- --- ---" or "------------")
+    # Matches groups of dashes to find where columns start and end
+    $matches = [regex]::Matches($separatorLine, "-+")
+    
+    if ($matches.Count -ge 2) {
+        # Segmented separator (best case)
+        $nameOff    = $matches[0].Index
+        $nameLen    = $matches[0].Length
+        $idOff      = $matches[1].Index
+        $idLen      = $matches[1].Length
+        $versionOff = if ($matches.Count -ge 3) { $matches[2].Index } else { -1 }
+        $versionLen = if ($matches.Count -ge 3) { $matches[2].Length } else { -1 }
+        $sourceOff  = if ($matches.Count -ge 4) { $matches[3].Index } else { -1 }
+    }
+    else {
+        # Single long separator (fallback to heuristic parsing for all lines)
+        # We try to use the header line above the separator if possible
+        $sepIdx = [array]::IndexOf($lines, $separatorLine)
+        if ($sepIdx -gt 0) {
+            $headerLine = $lines[$sepIdx - 1]
+            # Use gaps in the header line to guess columns
+            # This is still better than fixed English headers
+            $parts = [regex]::Matches($headerLine, "\S+")
+            if ($parts.Count -ge 2) {
+                $nameOff = $parts[0].Index
+                $idOff = $parts[1].Index
+                $versionOff = if ($parts.Count -ge 3) { $parts[2].Index } else { -1 }
+                $sourceOff = if ($parts.Count -ge 4) { $parts[3].Index } else { -1 }
+                
+                # Lengths are determined by the distance to the next column
+                $nameLen = $idOff - $nameOff
+                $idLen = if ($versionOff -gt 0) { $versionOff - $idOff } else { 100 }
+                $versionLen = if ($sourceOff -gt 0) { $sourceOff - $versionOff } else { 100 }
+            }
+            else { return $results }
+        }
+        else { return $results }
+    }
 
     $dataStart = $false
     foreach ($line in $lines) {
-        if ($line -match "^-{3,}") { $dataStart = $true; continue }
+        if ($line -eq $separatorLine) { $dataStart = $true; continue }
         if (-not $dataStart -or $line -match "^\s*$|^-|^[^\x00-\x7F]|%|[\d.]+\s+[KMG]B\s*/") { continue }
+        
         $len = $line.Length
         if ($len -le $nameOff) { continue }
 
         try {
-            $vEnd = $(if ($sourceOff -gt 0) { $sourceOff } else { $len })
-            $name = $line.Substring($nameOff, [Math]::Min($idOff - $nameOff, $len - $nameOff)).Trim()
-            $id = $(if ($len -gt $idOff) { $line.Substring($idOff, [Math]::Min($versionOff - $idOff, $len - $idOff)).Trim() } else { "" })
-            $ver = $(if ($len -gt $versionOff) { $line.Substring($versionOff, [Math]::Min($vEnd - $versionOff, $len - $versionOff)).Trim() } else { "?" })
+            $name = $line.Substring($nameOff, [Math]::Min($nameLen, $len - $nameOff)).Trim()
+            
+            $id = ""
+            if ($idOff -lt $len) {
+                $id = $line.Substring($idOff, [Math]::Min($idLen, $len - $idOff)).Trim()
+            }
+
+            $ver = "?"
+            if ($versionOff -gt 0 -and $versionOff -lt $len) {
+                $vLen = if ($sourceOff -gt $versionOff) { $sourceOff - $versionOff } else { $versionLen }
+                $ver = $line.Substring($versionOff, [Math]::Min($vLen, $len - $versionOff)).Trim()
+            }
+
             if ($name -and $id) {
                 $results.Add([PSCustomObject]@{
                         Name    = $name
@@ -172,7 +219,10 @@ function _pw_parse_winget_lines {
                     })
             }
         }
-        catch { continue }
+        catch { 
+            # Log parsing error but keep going
+            Write-Debug "Failed to parse winget line: $line"
+        }
     }
     return $results
 }
@@ -227,78 +277,120 @@ function _pw_parse_scoop_lines {
 #region -- Search Engine ------------------------------------
 
 function _pw_search_all {
-    param($managers, [string]$query, [int]$limit = 40)
+    param($managers, [string]$query, [int]$limit = 40, [int]$timeoutSeconds = 25)
 
     $results = [System.Collections.Generic.List[PSCustomObject]]::new()
     $scripts = [ordered]@{}
+    $timeoutMs = $timeoutSeconds * 1000
+    $waitLimit = [int]($timeoutMs / 100)
 
     if ($managers["winget"]) {
-        $scripts["winget"] = { param($exe, $q) try { & $exe search --query $q --accept-source-agreements 2>$null } catch { @() } }
+        $scripts["winget"] = { 
+            param($exe, $q) 
+            try { 
+                # Run search and capture both success and error streams
+                $out = & $exe search --query $q --accept-source-agreements 2>&1
+                return $out
+            } catch { 
+                return @() 
+            } 
+        }
     }
     if ($managers["choco"]) {
-        $scripts["choco"] = { param($exe, $q) try { & $exe search $q --limit-output 2>$null } catch { @() } }
+        $scripts["choco"] = { 
+            param($exe, $q) 
+            try { 
+                $out = & $exe search $q --limit-output 2>&1
+                return $out
+            } catch { 
+                return @() 
+            } 
+        }
     }
     if ($managers["scoop"]) {
-        $scripts["scoop"] = { param($exe, $q) try { & $exe search $q 2>$null } catch { @() } }
+        $scripts["scoop"] = { 
+            param($exe, $q) 
+            try { 
+                $out = & $exe search $q 2>&1
+                return $out
+            } catch { 
+                return @() 
+            } 
+        }
     }
 
-    if ($PSVersionTable.PSVersion.Major -ge 7) {
-        # High-performance Parallel execution for PowerShell 7+
-        $jobResults = $scripts.Keys | ForEach-Object -Parallel {
-            $key = $_
-            $local_scripts = $using:scripts
-            $local_managers = $using:managers
-            $script = $local_scripts[$key]
-            $exe = $local_managers[$key]
-            $q = $using:query
-            $raw = & $script $exe $q
-            return @{ Key = $key; Raw = $raw }
-        } -ThrottleLimit 3
+    # Unified concurrency approach for all PS versions
+    # This allows us to control the UI (spinner) while waiting for background tasks
+    $rsPool = [runspacefactory]::CreateRunspacePool(1, $scripts.Count)
+    $rsPool.Open()
+    $tasks = New-Object System.Collections.Generic.List[Object]
+
+    foreach ($key in $scripts.Keys) {
+        $ps = [powershell]::Create().AddScript($scripts[$key]).AddArgument($managers[$key]).AddArgument($query)
+        $ps.RunspacePool = $rsPool
+        $tasks.Add(@{ Key = $key; PowerShell = $ps; AsyncResult = $ps.BeginInvoke(); Finished = $false })
+    }
+
+    $spinner = "|/-\"
+    $spinIdx = 0
+    $startTime = [DateTime]::Now
+    $timeoutMs = $timeoutSeconds * 1000
+
+    # UI Loop: Show real-time progress for each manager
+    while ($true) {
+        $allFinished = $true
+        Write-Host -NoNewline "`r    "
         
-        foreach ($res in $jobResults) {
-            $lines = @($res.Raw | ForEach-Object { "$_" })
-            switch ($res.Key) {
-                "winget" { $parsed = _pw_parse_winget_lines $lines }
-                "choco"  { $parsed = _pw_parse_choco_lines  $lines }
-                "scoop"  { $parsed = _pw_parse_scoop_lines  $lines }
+        foreach ($t in $tasks) {
+            if ($t.AsyncResult.IsCompleted) {
+                $t.Finished = $true
+                Write-Host -NoNewline "[" -ForegroundColor DarkGray
+                Write-Host -NoNewline "√" -ForegroundColor Green
+                Write-Host -NoNewline "] $($t.Key)  " -ForegroundColor DarkGray
+            } else {
+                $allFinished = $false
+                $char = $spinner[$spinIdx % 4]
+                Write-Host -NoNewline "[" -ForegroundColor DarkGray
+                Write-Host -NoNewline "$char" -ForegroundColor Yellow
+                Write-Host -NoNewline "] $($t.Key)  " -ForegroundColor DarkGray
             }
-            foreach ($r in $parsed) { $results.Add($r) }
         }
+
+        if ($allFinished) { break }
+        
+        # Check timeout
+        if (([DateTime]::Now - $startTime).TotalMilliseconds -gt $timeoutMs) {
+            Write-Host "" # New line
+            _pw_color "  [!] Search partially timed out ($timeoutSeconds s). Results may be incomplete." DarkGray
+            break
+        }
+
+        Start-Sleep -Milliseconds 150
+        $spinIdx++
     }
-    else {
-        # Efficient Runspace implementation for PowerShell 5.1
-        $runspaces = New-Object System.Collections.Generic.List[Object]
-        $rsPool = [runspacefactory]::CreateRunspacePool(1, 3)
-        $rsPool.Open()
+    Write-Host "" # End the spinner line
 
-        foreach ($key in $scripts.Keys) {
-            $ps = [powershell]::Create().AddScript($scripts[$key]).AddArgument($managers[$key]).AddArgument($query)
-            $ps.RunspacePool = $rsPool
-            $runspaces.Add(@{ Key = $key; PowerShell = $ps; AsyncResult = $ps.BeginInvoke() })
-        }
-
-        foreach ($rs in $runspaces) {
-            # Wait with 25s timeout
-            $waitCount = 0
-            while (-not $rs.AsyncResult.IsCompleted -and $waitCount -lt 250) {
-                Start-Sleep -Milliseconds 100
-                $waitCount++
-            }
-            if ($rs.AsyncResult.IsCompleted) {
-                $raw = $rs.PowerShell.EndInvoke($rs.AsyncResult)
+    # Collect and parse results
+    foreach ($t in $tasks) {
+        try {
+            if ($t.AsyncResult.IsCompleted) {
+                $raw = $t.PowerShell.EndInvoke($t.AsyncResult)
                 $lines = @($raw | ForEach-Object { "$_" })
-                switch ($rs.Key) {
+                $parsed = @()
+                switch ($t.Key) {
                     "winget" { $parsed = _pw_parse_winget_lines $lines }
                     "choco"  { $parsed = _pw_parse_choco_lines  $lines }
                     "scoop"  { $parsed = _pw_parse_scoop_lines  $lines }
                 }
                 foreach ($r in $parsed) { $results.Add($r) }
             }
-            else { _pw_color "  [!] Timeout in $($rs.Key)." DarkGray }
-            $rs.PowerShell.Dispose()
+        } catch {
+            Write-Debug "Error collecting results for $($t.Key): $_"
+        } finally {
+            $t.PowerShell.Dispose()
         }
-        $rsPool.Close()
     }
+    $rsPool.Close()
 
     if ($results.Count -gt $limit) { return $results | Select-Object -First $limit }
     return $results
@@ -323,6 +415,9 @@ function pacwin {
 
         [Parameter()]
         [int]$Limit = 40,
+
+        [Parameter()]
+        [int]$Timeout = 35,
 
         [Parameter()]
         [switch]$NoHeader
@@ -357,7 +452,7 @@ function pacwin {
         "^(search|-Ss)$" {
             if (-not $Query) { _pw_color "  [!] Search term missing." Yellow; return }
             _pw_color "  > Searching for '$Query'..." Cyan
-            $results = _pw_search_all $targetManagers $Query $Limit
+            $results = _pw_search_all $targetManagers $Query $Limit $Timeout
             _pw_render_results $results $Query
         }
 
@@ -369,7 +464,7 @@ function pacwin {
         "^(install|-S)$" {
             if (-not $Query) { _pw_color "  [!] Package name missing." Yellow; return }
             _pw_color "  Looking for candidates for '$Query'..." Cyan
-            $results = @(_pw_search_all $targetManagers $Query $Limit)
+            $results = @(_pw_search_all $targetManagers $Query $Limit $Timeout)
             
             if ($results.Count -eq 0) {
                 _pw_color "  No packages found for '$Query'." Yellow
@@ -478,6 +573,10 @@ function pacwin {
             }
         }
 
+        "^(self-update)$" {
+            _pw_self_update
+        }
+
         "^(help|--help|-h)$" {
             _pw_color "  Core Commands" Cyan
             _pw_color "    search <q>        Find packages in all managers (-Ss)" White
@@ -496,6 +595,7 @@ function pacwin {
             _pw_color ""
             _pw_color "  System" Cyan
             _pw_color "    status            Show manager paths" White
+            _pw_color "    self-update       Update pacwin script to latest" White
             _pw_color "    help              Show this menu" White
             _pw_color ""
             _pw_color "  Example:" Gray
@@ -645,15 +745,22 @@ function _pw_do_export {
 
     if ($managers["winget"]) {
         # winget export can be slow, we use --accept-source-agreements
-        $raw = winget export - --accept-source-agreements 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
-        if ($raw.Sources) {
-            foreach ($src in $raw.Sources) {
-                foreach ($pkg in $src.Packages) {
-                    $export.packages += [ordered]@{
-                        manager = "winget"; id = $pkg.PackageIdentifier
+        try {
+            $rawJson = winget export - --accept-source-agreements 2>$null
+            if ($rawJson) {
+                $raw = $rawJson | ConvertFrom-Json
+                if ($raw.Sources) {
+                    foreach ($src in $raw.Sources) {
+                        foreach ($pkg in $src.Packages) {
+                            $export.packages += [ordered]@{
+                                manager = "winget"; id = $pkg.PackageIdentifier
+                            }
+                        }
                     }
                 }
             }
+        } catch {
+            _pw_color "  [!] Error exporting from winget: $_" Yellow
         }
     }
     if ($managers["choco"]) {
@@ -668,13 +775,20 @@ function _pw_do_export {
         }
     }
     if ($managers["scoop"]) {
-        $raw = scoop export 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
-        if ($raw.apps) {
-            foreach ($app in $raw.apps) {
-                $export.packages += [ordered]@{
-                    manager = "scoop"; id = $app.Name
+        try {
+            $rawJson = scoop export 2>$null
+            if ($rawJson) {
+                $raw = $rawJson | ConvertFrom-Json
+                if ($raw.apps) {
+                    foreach ($app in $raw.apps) {
+                        $export.packages += [ordered]@{
+                            manager = "scoop"; id = $app.Name
+                        }
+                    }
                 }
             }
+        } catch {
+            _pw_color "  [!] Error exporting from scoop: $_" Yellow
         }
     }
 
@@ -817,6 +931,68 @@ function _pw_do_doctor {
 
 #endregion
 
+#region -- Self-Update ---------------------------------------
+
+function _pw_self_update {
+    $repoBaseUrl = "https://raw.githubusercontent.com/julesklord/pacwin/main"
+    $moduleName = "pacwin"
+    
+    _pw_color "  [i] Checking for pacwin updates..." Cyan
+    
+    # Detect module location
+    $module = Get-Module $moduleName
+    if (-not $module) {
+        _pw_color "  [!] Module pacwin is not loaded in current session." Red
+        return
+    }
+    
+    $moduleDir = Split-Path $module.Path
+    _pw_color "  Target Directory: $moduleDir" DarkGray
+    
+    # Scenario 1: Git repository
+    if (Test-Path (Join-Path $moduleDir ".git")) {
+        _pw_color "  [i] Git repository detected. Updating via 'git pull'..." Cyan
+        $oldDir = Get-Location
+        try {
+            Set-Location $moduleDir
+            $out = git pull 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                _pw_color "  [√] Update successful via Git." Green
+                _pw_color "  $out" Gray
+            } else {
+                _pw_color "  [!] Git pull failed: $out" Red
+            }
+        } finally {
+            Set-Location $oldDir
+        }
+    } 
+    # Scenario 2: Standard installation
+    else {
+        _pw_color "  [i] Downloading latest version from GitHub..." Cyan
+        $files = @("pacwin.psm1", "pacwin.psd1")
+        $success = $true
+        foreach ($f in $files) {
+            $url = "$repoBaseUrl/$f"
+            $dest = Join-Path $moduleDir $f
+            try {
+                Invoke-WebRequest -Uri $url -OutFile $dest -ErrorAction Stop -UseBasicParsing
+                _pw_color "    [√] Updated $f" Gray
+            } catch {
+                _pw_color "    [!] Failed to update ${f}: $_" Red
+                $success = $false
+            }
+        }
+        if ($success) {
+            _pw_color "`n  [SUCCESS] pacwin has been updated to the latest version." Green
+        }
+    }
+    
+    _pw_color "  To apply changes, please restart your terminal or run:" Gray
+    _pw_color "  Import-Module $moduleName -Force" White
+}
+
+#endregion
+
 #region -- Sync (duplicate detection) ----------------------
 
 function _pw_do_sync {
@@ -835,32 +1011,17 @@ function _pw_do_sync {
     }
     if ($managers["choco"]) {
         $raw = choco list --local-only --limit-output 2>$null
-        foreach ($line in $raw) {
-            $parts = $line -split "\|"
-            if ($parts.Count -ge 1 -and $parts[0].Trim()) {
-                $installed.Add([PSCustomObject]@{
-                    Name = $parts[0].Trim(); ID = $parts[0].Trim()
-                    Version = $(if ($parts.Count -ge 2) { $parts[1] } else { "?" })
-                    Source = "chocolatey"; Manager = "choco"
-                })
-            }
-        }
+        $parsed = _pw_parse_choco_lines $raw
+        foreach ($p in $parsed) { $installed.Add($p) }
     }
     if ($managers["scoop"]) {
         $raw = scoop list 2>$null
-        foreach ($line in $raw) {
-            $parts = ("$line".Trim() -split "\s{2,}").Where({ $_ -ne "" })
-            if ($parts.Count -ge 1 -and $parts[0] -notmatch "^Name$|^Installed") {
-                $installed.Add([PSCustomObject]@{
-                    Name = $parts[0]; ID = $parts[0]
-                    Version = $(if ($parts.Count -ge 2) { $parts[1] } else { "?" })
-                    Source = "scoop"; Manager = "scoop"
-                })
-            }
-        }
+        $parsed = _pw_parse_scoop_lines $raw
+        foreach ($p in $parsed) { $installed.Add($p) }
     }
 
     # Normalize name (lowercase, no symbols) for grouping
+    # But also consider IDs if they are identical
     $groups = $installed | Group-Object { $_.Name.ToLower() -replace "[\-_\. ]","" }
     $dupes  = $groups | Where-Object { $_.Count -gt 1 }
 
@@ -876,7 +1037,7 @@ function _pw_do_sync {
         _pw_color ("  Package: {0}" -f $dupe.Group[0].Name) White
         foreach ($pkg in $dupe.Group) {
             $col = if ($script:SRC_COLORS[$pkg.Source]) { $script:SRC_COLORS[$pkg.Source] } else { "White" }
-            _pw_color ("    [{0}] v{1}" -f $pkg.Source, $pkg.Version) $col
+            _pw_color ("    [{0,-10}] ID: {1,-25} v{2}" -f $pkg.Source, $pkg.ID, $pkg.Version) $col
         }
         _pw_color "  Suggestion: keep one, run 'pacwin uninstall <id> -Manager <mgr>'" DarkGray
         _pw_color ""
@@ -997,16 +1158,8 @@ function _pw_do_outdated {
     if ($managers["choco"]) {
         if (-not $Silent) { _pw_color "  -- chocolatey -------------------------" Yellow }
         $out = choco outdated --limit-output 2>$null
-        foreach ($line in $out) {
-            if ($line -match "^\s*$") { continue }
-            $parts = $line -split "\|"
-            if ($parts.Count -ge 3) {
-                $allResults.Add([PSCustomObject]@{
-                    Name    = $parts[0]; ID = $parts[0]
-                    Version = $parts[2]; Source = "chocolatey"; Manager = "choco"
-                })
-            }
-        }
+        $parsed = _pw_parse_choco_lines $out
+        foreach ($p in $parsed) { $allResults.Add($p) }
     }
     if ($managers["scoop"]) {
         if (-not $Silent) { _pw_color "  -- scoop ------------------------------" Green }
@@ -1150,7 +1303,7 @@ Register-ArgumentCompleter -CommandName pacwin -ParameterName Command -ScriptBlo
     $cmds = @(
         'search','install','uninstall','update','outdated','list',
         'info','pin','unpin','export','import','doctor','status','help',
-        'hold','unhold','check','sync','dupes','dedup'
+        'hold','unhold','check','sync','dupes','dedup','self-update'
     )
     $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new(

@@ -4,7 +4,7 @@
   <img src="docs/logo_pacwin.png" width="800" alt="pacwin logo">
 </p>
 
-![Version](https://img.shields.io/badge/version-0.2.1-cyan)
+![Version](https://img.shields.io/badge/version-0.2.3-blue.svg)
 ![PowerShell](https://img.shields.io/badge/powershell-5.1%20%7C%207%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
@@ -83,17 +83,18 @@ Get `pacwin` running in under 2 minutes:
 
 ### Common Commands
 
-| Task | Command | Pacman Flag |
-| :--- | :--- | :--- |
-| **Search** | `pacwin search <query>` | `pacwin -Ss <query>` |
-| **Install** | `pacwin install <id>` | `pacwin -S <id>` |
-| **Uninstall** | `pacwin uninstall <id>` | `pacwin -R <id>` |
-| **Update** | `pacwin update [id]` | `pacwin -Syu` |
-| **List Installed** | `pacwin list` | `pacwin -Q` |
-| **Check Outdated**| `pacwin outdated` | `pacwin -Qu` |
-| **Hold (Pin)** | `pacwin hold <id>` | `pacwin pin <id>` |
-| **Health Check** | `pacwin doctor` | `pacwin check` |
-| **Deduplicate** | `pacwin sync` | `pacwin dupes` |
+| Task               | Command                 | Pacman Flag          |
+| :----------------- | :---------------------- | :------------------- |
+| **Search**         | `pacwin search <query>` | `pacwin -Ss <query>` |
+| **Install**        | `pacwin install <id>`   | `pacwin -S <id>`     |
+| **Uninstall**      | `pacwin uninstall <id>` | `pacwin -R <id>`     |
+| **Update**         | `pacwin update [id]`    | `pacwin -Syu`        |
+| **List Installed** | `pacwin list`           | `pacwin -Q`          |
+| **Check Outdated** | `pacwin outdated`       | `pacwin -Qu`         |
+| **Hold (Pin)**     | `pacwin hold <id>`      | `pacwin pin <id>`    |
+| **Health Check**   | `pacwin doctor`         | `pacwin check`       |
+| **Deduplicate**    | `pacwin sync`           | `pacwin dupes`       |
+| **Self-Update**    | `pacwin self-update`    | `pacwin update-self` |
 
 ### Identifying Sources
 
@@ -102,6 +103,20 @@ If you want to force a search or install using a specific manager:
 ```powershell
 pacwin search nodejs -Manager scoop
 ```
+
+### Advanced Usage
+
+- **Search Timeout**: Control the maximum wait time for parallel searches.
+
+  ```powershell
+  pacwin search git -Timeout 45
+  ```
+
+- **Quiet Mode**: Suppress the banner for scripting.
+
+  ```powershell
+  pacwin search python -NoHeader
+  ```
 
 ## Architecture & Design Philosophy
 
@@ -130,7 +145,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ### Metadata
 
-- **Status**: Stable (v0.2.1)
+- **Status**: Stable (v0.2.2)
 - **Requirements**: Windows PowerShell 5.1 or PS 7.2+
 - **Maintainers**: pacwin core contributors
 - **Known issues**: Scoop searches can timeout if bucket metadata is stale; run `scoop update` to fix.
