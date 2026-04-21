@@ -1,8 +1,6 @@
 # PowerShell backups
 *.bak.*
 *.bak
-
-
 # Temporary walkthroughs
 walkthrough_*.md
 
@@ -14,6 +12,7 @@ obj/
 docs/artifacts/
 .agents/
 .gemini/
+.claude/
 .snapshots/
 .vscode/
 pacwin.code-workspace
@@ -24,3 +23,12 @@ CLAUDE.md
 .gemini/
 .vibecheck/
 .snapshots/
+.gemini/
+.snapshots/
+*.cast
+.bin/
+*.txt
+*.log
+*.ps1.txt
+*.test.txt
+*audit.md
