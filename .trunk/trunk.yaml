@@ -17,6 +17,10 @@ runtimes:
 # This is the section where you manage your linters. (https://docs.trunk.io/check/configuration)
 lint:
   enabled:
+    - bandit@1.9.4
+    - black@26.3.1
+    - isort@8.0.1
+    - taplo@0.10.0
     - ruff@0.15.11
     - actionlint@1.7.12
     - checkov@3.2.524
