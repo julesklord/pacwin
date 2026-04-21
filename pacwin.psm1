@@ -48,9 +48,9 @@ function _pw_header {
     _pw_color ""
     _pw_color "  >> " Cyan -NoNewline
     _pw_color "pacwin" White -NoNewline
-    _pw_color " v0.2.4" DarkGray -NoNewline
+    _pw_color " v0.2.5" DarkGray -NoNewline
     _pw_color "  --  " DarkGray -NoNewline
-    _pw_color "universal package layer" Gray
+    _pw_color "universal package layer" DarkGray
 
     if ($null -ne $managers) {
         _pw_color "  [" DarkGray -NoNewline
@@ -609,6 +609,11 @@ function pacwin {
             _pw_color ""
             _pw_color "  Example:" Gray
             _pw_color "    pacwin search nodejs" White
+        }
+
+        "^(version|--version|-v)$" {
+            _pw_color "  pacwin" White -NoNewline
+            _pw_color " v0.2.5" Gray
         }
 
         Default {

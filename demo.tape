@@ -1,4 +1,4 @@
-# VHS Tape for Pacwin v0.2.4
+# VHS Tape for Pacwin v0.2.5
 # Run with: vhs demo.tape -o docs/demo.gif
 
 Set Shell powershell
