@@ -2,7 +2,7 @@
 #  pacwin.psm1  -  Universal Package Layer for Windows
 #  Abstraction over: winget | chocolatey | scoop
 #  Compatible: PowerShell 5.1 + PowerShell 7+
-#  v0.2.0 (New Features & PS 5.1 Fixes)
+#  v0.2.4 (New Features & Concurrency Fixes)
 # ============================================================
 
 Set-StrictMode -Off
