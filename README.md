@@ -1,8 +1,10 @@
 # pacwin
 
+<!-- markdownlint-disable MD033 -->
 <p align="center">
   <img src="docs/logo_pacwin.png" width="800" alt="pacwin logo">
 </p>
+<!-- markdownlint-enable MD033 -->
 
 ![Version](https://img.shields.io/badge/version-0.2.5-blue.svg)
 ![PowerShell](https://img.shields.io/badge/powershell-5.1%20%7C%207%2B-blue)

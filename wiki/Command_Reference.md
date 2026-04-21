@@ -8,10 +8,10 @@
 | :--- | :--- | :--- |
 | **Search** | `pacwin search <query>` | `pacwin -Ss <query>` |
 | **Install** | `pacwin install <id>` | `pacwin -S <id>` |
-| **Uninstall**| `pacwin uninstall <id>` | `pacwin -R <id>` |
-| **Update All**| `pacwin update` | `pacwin -Syu` |
-| **Update One**| `pacwin update <id>` | N/A |
-| **List Installed**| `pacwin list` | `pacwin -Q` |
+| **Uninstall** | `pacwin uninstall <id>` | `pacwin -R <id>` |
+| **Update All** | `pacwin update` | `pacwin -Syu` |
+| **Update One** | `pacwin update <id>` | N/A |
+| **List Installed** | `pacwin list` | `pacwin -Q` |
 | Outdated | `pacwin outdated` | `pacwin -Qu` |
 | **Export** | `pacwin export <path>` | N/A |
 | **Status** | `pacwin status` | N/A |
@@ -34,7 +34,7 @@ Finds packages matching a query across all detected managers. It utilizes an opt
 
 **Syntax:** `pacwin search <query> [-Manager <string>]`
 
-```powershell
+```pwsh
 PS> pacwin search nodejs
   > Searching for 'nodejs'...
 
@@ -51,7 +51,7 @@ Installs a package. If multiple matches are found, it interacts with the user to
 
 **Syntax:** `pacwin install <id> [-Manager <string>]`
 
-```powershell
+```pwsh
 PS> pacwin install nodejs
   Looking for candidates for 'nodejs'...
   ...
@@ -69,7 +69,7 @@ Updates all packages synchronously, or checks intelligent registries to update a
 
 **Syntax:** `pacwin update [id] [-Manager <string>]`
 
-```powershell
+```pwsh
 PS> pacwin update
   -- winget -----------------------------
   No updates available.
@@ -81,7 +81,7 @@ PS> pacwin update
 
 **Individual Update:**
 
-```powershell
+```pwsh
 PS> pacwin update vlc
   Looking for candidates for 'vlc'...
   Searching in outdated packages...
@@ -91,7 +91,7 @@ PS> pacwin update vlc
 
 ## Global Update
 
-```powershell
+```pwsh
 PS> pacwin update
 ```
 
@@ -101,7 +101,7 @@ Triggering concurrent updates:
 - `choco upgrade all`
 - `scoop update *`
 
-```
+```pwsh
 
 ## `pacwin uninstall`
 

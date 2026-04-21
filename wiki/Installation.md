@@ -15,7 +15,7 @@
 
 The most professional and easiest way to install `pacwin`:
 
-```powershell
+```pwsh
 PS> Install-Module -Name pacwin -Scope CurrentUser
 ```
 
@@ -23,13 +23,13 @@ PS> Install-Module -Name pacwin -Scope CurrentUser
 
 You can deploy `pacwin` directly from the remote repository using `curl`. This script will download the module and update your `$PROFILE` automatically.
 
-```powershell
+```pwsh
 PS> curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | powershell -Command -
 ```
 
 ### Method 3: Manual Clone (for developers)
 
-```powershell
+```pwsh
 PS> git clone https://github.com/julesklord/pacwin.git
 PS> cd pacwin
 PS> .\install.ps1
@@ -39,11 +39,11 @@ PS> .\install.ps1
 
 After installation, restart your PowerShell session or dot-source your profile. Verify the installation by running the status check:
 
-```powershell
+```pwsh
 PS> pacwin doctor
   >> pacwin v0.2.4  --  universal package layer
   [ winget + | choco + | scoop + ]
-  ================================================
+  ===============================================================================
   Detected Managers:
   * winget -> C:\Users\user\AppData\Local\Microsoft\WindowsApps\winget.exe
   * choco -> C:\ProgramData\chocolatey\bin\choco.exe
@@ -51,11 +51,11 @@ PS> pacwin doctor
 
 You should also run the health check:
 
-```powershell
+```pwsh
 PS> pacwin doctor
 ```
 
-```
+```pwsh
 
 > [!WARNING]
 > If a manager is installed but not listed, check your `$env:PATH` environment variable. `pacwin` relies on `Get-Command` to detect them.

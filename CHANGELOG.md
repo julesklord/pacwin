@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -6,12 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.2.5] - 2026-04-21
+
 ### Fixed
+
 - Character visualization issues in spinners for non-UTF8 terminals (PS 5.1).
 - Forced UTF8 console output for better rendering of UI elements.
 
 ## [0.2.4] - 2026-04-21
+
 ### Fixed
+
 - Hardened `pacwin.psd1` for PowerShell Gallery compatibility (fixed "Cannot index into a null array" error).
 - Added `FileList` to module manifest to ensure clean deployments.
 - Fixed variable interpolation bug in `self-update` error handler.
@@ -106,5 +111,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reinforced input sanitization logic in `_pw_sanitize`.
 
 ---
-
-_Release v0.1.0_

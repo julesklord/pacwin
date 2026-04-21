@@ -20,7 +20,7 @@ Windows package management is fragmented. Users often have to remember different
 | :--- | :--- | :--- | :--- | :--- |
 | **Primary Scope** | MS Store, App Installers | System-wide, Admin apps | Portable, Dev tools | **All of the above** |
 | **Syntax** | Verbose | Standard | Simple | `pacman`-like (`-S`, `-R`) |
-| **Search Performance**| Normal | Slow (network bound) | Fast (local JSON) | **Concurrent (Hybrid)** |
+| **Search Performance** | Normal | Slow (network bound) | Fast (local JSON) | **Concurrent (Hybrid)** |
 | **Error Handling** | Raw | Raw | Raw | **Parsed & Intercepted** |
 
 ## 5-Minute Quickstart
