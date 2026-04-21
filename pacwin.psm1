@@ -2,11 +2,16 @@
 #  pacwin.psm1  -  Universal Package Layer for Windows
 #  Abstraction over: winget | chocolatey | scoop
 #  Compatible: PowerShell 5.1 + PowerShell 7+
-#  v0.2.4 (New Features & Concurrency Fixes)
+#  v0.2.5 (Fixes & Stability)
 # ============================================================
 
 Set-StrictMode -Off
 $ErrorActionPreference = "Continue"
+
+# Force UTF8 for better character rendering in PS 5.1
+if ($PSVersionTable.PSVersion.Major -lt 6) {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+}
 
 #region -- Security & Validation -----------------------------
 
@@ -349,7 +354,7 @@ function _pw_search_all {
             if ($t.AsyncResult.IsCompleted) {
                 $t.Finished = $true
                 Write-Host -NoNewline "[" -ForegroundColor DarkGray
-                Write-Host -NoNewline "√" -ForegroundColor Green
+                Write-Host -NoNewline "v" -ForegroundColor Green
                 Write-Host -NoNewline "] $($t.Key)  " -ForegroundColor DarkGray
             } else {
                 $allFinished = $false
@@ -972,7 +977,7 @@ function _pw_self_update {
             Set-Location $moduleDir
             $out = git pull 2>&1
             if ($LASTEXITCODE -eq 0) {
-                _pw_color "  [√] Update successful via Git." Green
+                _pw_color "  [v] Update successful via Git." Green
                 _pw_color "  $out" Gray
             } else {
                 _pw_color "  [!] Git pull failed: $out" Red
@@ -991,7 +996,7 @@ function _pw_self_update {
             $dest = Join-Path $moduleDir $f
             try {
                 Invoke-WebRequest -Uri $url -OutFile $dest -ErrorAction Stop -UseBasicParsing
-                _pw_color "    [√] Updated $f" Gray
+                _pw_color "    [v] Updated $f" Gray
             } catch {
                 _pw_color "    [!] Failed to update ${f}: $_" Red
                 $success = $false
@@ -1343,7 +1348,7 @@ Register-ArgumentCompleter -CommandName pacwin -ParameterName Query -ScriptBlock
     param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
     $cmd = $fakeBoundParameters['Command']
     if ($cmd -notin @('uninstall','pin','unpin','update','info')) { return }
-    # Intenta completar con winget list (rÃ¡pido si existe)
+    # Intenta completar con winget list (rapido si existe)
     if (-not (Get-Command "winget" -ErrorAction SilentlyContinue)) { return }
     
     $raw = winget list --query $wordToComplete 2>$null | Select-Object -Skip 3

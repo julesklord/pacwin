@@ -13,7 +13,7 @@ RootModule = 'pacwin.psm1'
 
 
 # Version number of this module.
-ModuleVersion = '0.2.4'
+ModuleVersion = '0.2.5'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -108,7 +108,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'v0.2.4: Hardened manifest for PSGallery compatibility. Added premium spinner UI and unified concurrency engine.'
+        ReleaseNotes = 'v0.2.5: Fixed character visualization issues in spinners for non-UTF8 terminals. Added forced UTF8 output for PowerShell 5.1.'
 
         # Prerelease string of this module
         # Prerelease = ''

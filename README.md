@@ -4,7 +4,7 @@
   <img src="docs/logo_pacwin.png" width="800" alt="pacwin logo">
 </p>
 
-![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.5-blue.svg)
 ![PowerShell](https://img.shields.io/badge/powershell-5.1%20%7C%207%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
@@ -156,7 +156,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ### Metadata
 
-- **Status**: Stable (v0.2.4)
+- **Status**: Stable (v0.2.5)
 - **Requirements**: Windows PowerShell 5.1 or PS 7.2+
 - **Maintainers**: julesklord
 - **Known issues**: Scoop searches can timeout if bucket metadata is stale; run `scoop update` to fix.

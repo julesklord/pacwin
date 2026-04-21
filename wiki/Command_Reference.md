@@ -1,6 +1,6 @@
 # Command Reference
 
-**Updated:** 2026-04-17 | **Read time:** 5 min | **Difficulty:** Intermediate
+**Updated:** 2026-04-21 | **Read time:** 5 min | **Difficulty:** Intermediate
 
 `pacwin` commands can be used with explicit verbs or `pacman` shorthand flags.
 

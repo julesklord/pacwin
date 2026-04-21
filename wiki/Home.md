@@ -1,6 +1,6 @@
 # Welcome to pacwin Wiki
 
-**Updated:** 2026-04-17 | **Read time:** 3 min | **Difficulty:** Beginner
+**Updated:** 2026-04-21 | **Read time:** 3 min | **Difficulty:** Beginner
 
 `pacwin` is a Universal Package Layer for Windows. It acts as an abstraction wrapper over existing Windows package managers: `winget`, `chocolatey`, and `scoop`.
 
