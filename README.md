@@ -6,13 +6,11 @@
 </p>
 <!-- markdownlint-enable MD033 -->
 
-![Version](https://img.shields.io/badge/version-0.2.5-blue.svg)
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/pacwin.svg?color=blue&label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/pacwin)
 [![Downloads](https://img.shields.io/powershellgallery/dt/pacwin.svg?color=blue&label=Downloads)](https://www.powershellgallery.com/packages/pacwin)
 ![PowerShell](https://img.shields.io/badge/powershell-5.1%20%7C%207%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
-![Engine](https://img.shields.io/badge/engine-optimized-orange)
 
 Unify winget, chocolatey, and scoop under a fast, secure, pacman-like CLI for Windows.
 
