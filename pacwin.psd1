@@ -21,19 +21,19 @@ ModuleVersion = '0.0.1'
 GUID = 'c425dd15-2759-48c0-b33c-b3eb50ef1b90'
 
 # Author of this module
-Author = 'ESTUDIO'
+Author = 'julesklord'
 
 # Company or vendor of this module
-CompanyName = 'Unknown'
+CompanyName = 'julesklord'
 
 # Copyright statement for this module
-Copyright = '(c) ESTUDIO. All rights reserved.'
+Copyright = '(c) julesklord. All rights reserved.'
 
 # Description of the functionality provided by this module
-# Description = ''
+Description = 'Advanced package manager for Windows that uses winget, chocolatey, and scoop.'
 
 # Minimum version of the PowerShell engine required by this module
-# PowerShellVersion = ''
+PowerShellVersion = '5.1'
 
 # Name of the PowerShell host required by this module
 # PowerShellHostName = ''
@@ -69,7 +69,7 @@ Copyright = '(c) ESTUDIO. All rights reserved.'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = @()
+FunctionsToExport = @('pacwin')
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()
@@ -87,7 +87,7 @@ AliasesToExport = @()
 # ModuleList = @()
 
 # List of all files packaged with this module
-# FileList = @()
+FileList = @('pacwin.psm1', 'pacwin.psd1', 'LICENSE', 'README.md', 'CHANGELOG.md')
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{
@@ -95,19 +95,19 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        # Tags = @()
+        Tags = @('PackageManagement', 'winget', 'chocolatey', 'scoop', 'pacman', 'Windows', 'CLI')
 
         # A URL to the license for this module.
-        # LicenseUri = ''
+        LicenseUri = 'https://github.com/julesklord/pacwin/blob/main/LICENSE'
 
         # A URL to the main website for this project.
-        # ProjectUri = ''
+        ProjectUri = 'https://github.com/julesklord/pacwin'
 
         # A URL to an icon representing this module.
         # IconUri = ''
 
         # ReleaseNotes of this module
-        # ReleaseNotes = ''
+        ReleaseNotes = 'v0.2.4: Hardened manifest for PSGallery compatibility. Added premium spinner UI and unified concurrency engine.'
 
         # Prerelease string of this module
         # Prerelease = ''
