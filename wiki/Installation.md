@@ -11,17 +11,23 @@
 
 ## Installation Methods
 
-### Method 1: Automated Script (Recommended)
+### Method 1: PowerShell Gallery (Recommended)
 
-You can deploy `pacwin` directly from the remote repository using `curl`. This script will download the module and update your `$PROFILE` automatically. **Run this from an elevated (Administrator) PowerShell terminal.**
+The most professional and easiest way to install `pacwin`:
+
+```powershell
+PS> Install-Module -Name pacwin -Scope CurrentUser
+```
+
+### Method 2: Automated Script
+
+You can deploy `pacwin` directly from the remote repository using `curl`. This script will download the module and update your `$PROFILE` automatically.
 
 ```powershell
 PS> curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | powershell -Command -
 ```
 
-### Method 2: Manual Clone
-
-If you prefer to review the code or want to contribute:
+### Method 3: Manual Clone (for developers)
 
 ```powershell
 PS> git clone https://github.com/julesklord/pacwin.git
@@ -34,8 +40,8 @@ PS> .\install.ps1
 After installation, restart your PowerShell session or dot-source your profile. Verify the installation by running the status check:
 
 ```powershell
-PS> pacwin status
-  >> pacwin v0.2.1  --  universal package layer
+PS> pacwin doctor
+  >> pacwin v0.2.4  --  universal package layer
   [ winget + | choco + | scoop + ]
   ================================================
   Detected Managers:

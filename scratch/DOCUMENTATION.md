@@ -111,6 +111,6 @@ pacwin install vlc
 - **Maintenance Note**: Always prioritize ASCII characters for UI elements to maintain compatibility with legacy `conhost.exe`.
 
 ---
-**Last updated**: 2026-04-09
-**Maintainer**: pacwin contributors
+**Last updated**: 2026-04-21
+**Maintainer**: julesklord
 **Known Limitations**: `pacwin update` for individual packages is currently restricted to "Update All" or sequential manual updates.

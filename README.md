@@ -4,7 +4,7 @@
   <img src="docs/logo_pacwin.png" width="800" alt="pacwin logo">
 </p>
 
-![Version](https://img.shields.io/badge/version-0.2.3-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)
 ![PowerShell](https://img.shields.io/badge/powershell-5.1%20%7C%207%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
@@ -29,21 +29,32 @@ Managing software on Windows typically requires interacting with three distinct 
 - Interpreting **cryptic exit codes** (like 3010 or 0x8A15002E) into clear status messages.
 - Using a **Hybrid Engine** (Runspaces/Threads) to execute searches in parallel without spiking CPU usage.
 
-## Quick start and installltion
+## Quick start and Installation
 
-### Automated Install (via curl)
+### Method 1: PowerShell Gallery (Recommended)
+
+The easiest way to install `pacwin` is directly from the [PowerShell Gallery](https://www.powershellgallery.com/packages/pacwin):
+
+```powershell
+Install-Module -Name pacwin -Scope CurrentUser
+```
+
+### Method 2: Automated Install (via curl)
+
+If you want an all-in-one setup that also updates your `$PROFILE`:
 
 ```powershell
 curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | powershell -Command -
 ```
 
-Get `pacwin` running in under 2 minutes:
+### Method 3: Manual Install (from source)
 
-1. Open PowerShell (**Run as Administrator** - required for Chocolatey operations).
-2. Download and run the installer:
+1. Open PowerShell (**Run as Administrator** - recommended for Chocolatey).
+2. Clone and run the installer:
 
    ```powershell
-   # If you have the repo locally:
+   git clone https://github.com/julesklord/pacwin.git
+   cd pacwin
    .\install.ps1
    ```
 
@@ -145,7 +156,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ### Metadata
 
-- **Status**: Stable (v0.2.2)
+- **Status**: Stable (v0.2.4)
 - **Requirements**: Windows PowerShell 5.1 or PS 7.2+
-- **Maintainers**: pacwin core contributors
+- **Maintainers**: julesklord
 - **Known issues**: Scoop searches can timeout if bucket metadata is stale; run `scoop update` to fix.
