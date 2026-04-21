@@ -5,6 +5,9 @@ on:
     tags:
       - v* # Se dispara cuando subís un tag como v0.2.4 
 
+permissions:
+  contents: read
+
 jobs:
   publish:
     runs-on: windows-latest
