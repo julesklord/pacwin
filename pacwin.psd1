@@ -6,26 +6,21 @@
     Author            = 'julesklord'
     CompanyName       = 'julesklord'
     Copyright         = '(c) 2026 julesklord. All rights reserved.'
-    Description       = 'Universal package layer for Windows — winget + chocolatey + scoop'
+    Description       = 'Universal package layer for Windows - winget + choco + scoop'
     PowerShellVersion = '5.1'
-    
-    # Exported elements
     FunctionsToExport = @('pacwin')
     CmdletsToExport   = @()
     VariablesToExport = @()
     AliasesToExport   = @()
     DscResourcesToExport = @()
-    
-    # Module dependencies
     RequiredModules   = @()
     NestedModules     = @()
-    
     PrivateData       = @{
         PSData = @{
-            Tags         = @('package-manager','winget','chocolatey','scoop','wrapper','pacman')
+            Tags         = @('package-manager','winget','chocolatey','scoop','pacman')
             ProjectUri   = 'https://github.com/julesklord/pacwin'
             LicenseUri   = 'https://github.com/julesklord/pacwin/blob/main/LICENSE'
-            ReleaseNotes = 'v0.2.4: Hardened manifest for PSGallery and fixed self-update variable interpolation.'
+            ReleaseNotes = 'v0.2.4: Fixed PSGallery publishing issues.'
         }
     }
 }
