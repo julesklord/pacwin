@@ -84,4 +84,42 @@ Describe "pacwin core logic" {
             Assert-MockCalled _pw_do_sync -ModuleName pacwin -Times 1 -Exactly
         }
     }
+
+    Context "String Truncation (_pw_truncate)" {
+        It "Should return a padded string when input is null or empty" {
+            InModuleScope pacwin {
+                $result = _pw_truncate -str $null -max 5
+                $result | Should -Be "     "
+                $result.Length | Should -Be 5
+
+                $resultEmpty = _pw_truncate -str "" -max 3
+                $resultEmpty | Should -Be "   "
+                $resultEmpty.Length | Should -Be 3
+            }
+        }
+
+        It "Should return a padded string when input is shorter than max" {
+            InModuleScope pacwin {
+                $result = _pw_truncate -str "abc" -max 5
+                $result | Should -Be "abc  "
+                $result.Length | Should -Be 5
+            }
+        }
+
+        It "Should return the exact string when input length equals max" {
+            InModuleScope pacwin {
+                $result = _pw_truncate -str "abcde" -max 5
+                $result | Should -Be "abcde"
+                $result.Length | Should -Be 5
+            }
+        }
+
+        It "Should truncate and append a dot when input is longer than max" {
+            InModuleScope pacwin {
+                $result = _pw_truncate -str "abcdefg" -max 5
+                $result | Should -Be "abcd."
+                $result.Length | Should -Be 5
+            }
+        }
+    }
 }
