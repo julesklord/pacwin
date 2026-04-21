@@ -68,7 +68,7 @@ Returns an array of `PSCustomObject` for search operations or boolean success/fa
 
 ## 5. Error Interpretation System
 
-Located in `_pw_handle_result` ([pacwin.psm1](file:///g:/DEVELOPMENT/pacwin/pacwin.psm1)), this system translates internal manager states:
+Located in `_pw_handle_result` ([pacwin.psm1](file:///c:/DEVELOPMENT/pacwin/pacwin.psm1)), this system translates internal manager states:
 
 - **Winget**: Detects `0x8A15002E` (Restart Required) and maps it to a human-readable status.
 - **Chocolatey**: Handles exit codes `1641` and `3010` as success-with-reboot.
@@ -97,11 +97,11 @@ pacwin install vlc
 
 ## 7. Troubleshooting
 
-| Symptom | Cause | Solution |
-| :--- | :--- | :--- |
-| `[!] Timeout in scoop` | Scoop bucket update is slow | Run `scoop update` manually to warm the cache. |
-| Characters like `Ôûê` | CLI output encoding mismatch | Ensure terminal uses UTF-8 (`chcp 65001`). `pacwin` forces UTF8 BOM internally. |
-| `Command Not Found` | Module path not in env | Run `.\install.ps1` to update your `$PROFILE`. |
+| Symptom                | Cause                        | Solution                                                                        |
+| :--------------------- | :--------------------------- | :------------------------------------------------------------------------------ |
+| `[!] Timeout in scoop` | Scoop bucket update is slow  | Run `scoop update` manually to warm the cache.                                  |
+| Characters like `Ôûê`  | CLI output encoding mismatch | Ensure terminal uses UTF-8 (`chcp 65001`). `pacwin` forces UTF8 BOM internally. |
+| `Command Not Found`    | Module path not in env       | Run `.\install.ps1` to update your `$PROFILE`.                                  |
 
 ## 8. Maintenance & Dependencies
 
@@ -111,6 +111,7 @@ pacwin install vlc
 - **Maintenance Note**: Always prioritize ASCII characters for UI elements to maintain compatibility with legacy `conhost.exe`.
 
 ---
+
 **Last updated**: 2026-04-21
 **Maintainer**: julesklord
 **Known Limitations**: `pacwin update` for individual packages is currently restricted to "Update All" or sequential manual updates.

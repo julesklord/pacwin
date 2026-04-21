@@ -2,6 +2,7 @@
 *.bak.*
 *.bak
 # Temporary walkthroughs
+*.md
 walkthrough_*.md
 
 # Session logs (brain directory is outside, but just in case)
@@ -27,8 +28,8 @@ CLAUDE.md
 .snapshots/
 *.cast
 .bin/
+*.ps1.txt
+*_test.txt
+*_audit.md
 *.txt
 *.log
-*.ps1.txt
-*.test.txt
-*audit.md

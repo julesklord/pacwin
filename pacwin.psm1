@@ -67,7 +67,11 @@ function _pw_header {
     _pw_color ("  " + ("=" * 48)) DarkGray
 }
 
-function _pw_sep { _pw_color ("  " + ("-" * 68)) DarkGray }
+function _pw_sep { 
+    $w = try { $Host.UI.RawUI.WindowSize.Width - 4 } catch { 68 }
+    if ($w -lt 40) { $w = 68 }
+    _pw_color ("  " + ("-" * $w)) DarkGray 
+}
 
 function _pw_exe {
     param([string]$name)
@@ -635,21 +639,32 @@ function _pw_render_results {
         return
     }
 
+    $termWidth = try { $Host.UI.RawUI.WindowSize.Width } catch { 100 }
+    if ($termWidth -lt 80) { $termWidth = 80 }
+    
+    $idxW = if ($NoIndex) { 2 } else { 8 }
+    $srcW = 12
+    $remW = $termWidth - $idxW - $srcW - 4
+    
+    $nameW = [int]($remW * 0.5)
+    $idW   = [int]($remW * 0.3)
+    $verW  = $remW - $nameW - $idW
+
     _pw_color ""
     if (-not $NoIndex) {
-        _pw_color ("  {0,-4} {1,-36} {2,-24} {3,-14} {4}" -f "#", "Name", "ID", "Version", "Source") DarkGray
+        _pw_color ("  {0,-5} {1,-$($nameW-1)} {2,-$($idW-1)} {3,-$($verW-1)} {4}" -f "#", "Name", "ID", "Version", "Source") DarkGray
     }
     else {
-        _pw_color ("  {0,-36} {1,-24} {2,-14} {3}" -f "Name", "ID", "Version", "Source") DarkGray
+        _pw_color ("  {0,-$($nameW-1)} {1,-$($idW-1)} {2,-$($verW-1)} {3}" -f "Name", "ID", "Version", "Source") DarkGray
     }
     _pw_sep
 
     $i = 1
     foreach ($r in $arr) {
         $col = if ($script:SRC_COLORS[$r.Source]) { $script:SRC_COLORS[$r.Source] } else { "White" }
-        $name = _pw_truncate $r.Name 34
-        $id = _pw_truncate $r.ID   22
-        $ver = _pw_truncate $r.Version 12
+        $name = _pw_truncate $r.Name ($nameW - 2)
+        $id = _pw_truncate $r.ID   ($idW - 2)
+        $ver = _pw_truncate $r.Version ($verW - 2)
 
         if (-not $NoIndex) {
             _pw_color ("  [{0,-2}] " -f $i) DarkGray -NoNewline
@@ -657,7 +672,7 @@ function _pw_render_results {
         else {
             _pw_color "  " DarkGray -NoNewline
         }
-        _pw_color ("{0,-36}{1,-24}{2,-14}" -f $name, $id, $ver) White -NoNewline
+        _pw_color ("{0,-$nameW}{1,-$idW}{2,-$verW}" -f $name, $id, $ver) White -NoNewline
         _pw_color $r.Source $col
         $i++
     }
