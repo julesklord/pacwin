@@ -1,0 +1,29 @@
+name: Publish to PowerShell Gallery
+
+on:
+  push:
+    tags:
+      - 'v*' # Se dispara cuando subís un tag como v0.2.4
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Publish Module
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+          DOTNET_CLI_UI_LANGUAGE: en-US # El toque secreto para que no falle por el idioma
+        run: |
+          # 1. Crear carpeta limpia para evitar basura del repo
+          $releaseDir = New-Item -ItemType Directory -Path "release/pacwin" -Force
+          
+          # 2. Copiar solo lo esencial
+          Copy-Item "pacwin.psm1", "pacwin.psd1", "LICENSE", "README.md", "CHANGELOG.md" -Destination $releaseDir
+          
+          # 3. Publicar
+          Write-Host "Publicando version del tag..." -ForegroundColor Cyan
+          Publish-Module -Path $releaseDir.FullName -NuGetApiKey $env:PSGALLERY_API_KEY -Verbose

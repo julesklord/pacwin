@@ -1,21 +1,42 @@
 name: PowerShell CI
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-permissions:
-  contents: read
+
 jobs:
   test:
+    name: Pester Tests
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Run Pester tests
-      shell: pwsh
-      run: |
-        $ModulePath = Resolve-Path "pacwin.psm1"
-        $PesterPath = Resolve-Path "tests/modules/Pester"
-        $env:PSModulePath = "$PesterPath;$env:PSModulePath"
-        Import-Module Pester -Force
-        Invoke-Pester -Path ./tests -Data @{ ModulePath = $ModulePath.Path } -Output Detailed
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Tests
+        shell: pwsh
+        run: |
+          # Asegurar que Pester 5 esté disponible
+          $module = Get-Module Pester -ListAvailable | Where-Object { $_.Version.Major -ge 5 }
+          if (-not $module) {
+              Write-Host "Instalando Pester 5..." -ForegroundColor Cyan
+              Install-Module Pester -Force -SkipPublisherCheck -Scope CurrentUser
+          }
+          
+          # Configurar y ejecutar Pester
+          $config = New-PesterConfiguration
+          $config.Run.Path = "./tests/pacwin.Tests.ps1"
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputFormat = "NUnitXml"
+          $config.TestResult.OutputPath = "test-results.xml"
+          $config.Output.Verbosity = "Detailed"
+          
+          Invoke-Pester -Configuration $config
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results
+          path: test-results.xml

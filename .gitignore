@@ -17,7 +17,7 @@ docs/artifacts/
 .snapshots/
 .vscode/
 pacwin.code-workspace
-workflows/
+/workflows/
 CLAUDE.md
 .claude/
 .cursor/
