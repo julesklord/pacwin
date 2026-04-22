@@ -245,7 +245,7 @@ function _pw_parse_winget_lines {
             Write-Debug "Failed to parse winget line: $line"
         }
     }
-    return $results
+    return ,$results
 }
 
 function _pw_parse_choco_lines {
@@ -263,7 +263,7 @@ function _pw_parse_choco_lines {
                 })
         }
     }
-    return $results
+    return ,$results
 }
 
 function _pw_parse_scoop_lines {
@@ -290,7 +290,7 @@ function _pw_parse_scoop_lines {
                 })
         }
     }
-    return $results
+    return ,$results
 }
 
 #endregion
