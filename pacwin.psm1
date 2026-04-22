@@ -912,7 +912,7 @@ function _pw_do_doctor {
     # Connectivity check
     _pw_color "" 
     _pw_color "  Connectivity:" DarkGray
-    $hosts = @("winget.azureedge.net","community.chocolatey.org","github.com")
+    $hosts = @("api.github.com","community.chocolatey.org","github.com")
     foreach ($h in $hosts) {
         $ok = Test-Connection -ComputerName $h -Count 1 -Quiet -ErrorAction SilentlyContinue
         _pw_color ("  {0,-32} : {1}" -f $h, $(if ($ok) { "OK" } else { "UNREACHABLE" })) $(if ($ok) { "Green" } else { "Red" })
