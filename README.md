@@ -12,61 +12,87 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 
-Unify winget, chocolatey, and scoop under a fast, secure, pacman-like CLI for Windows.
+**One CLI. Three managers. Zero excuses for missing `pacman`.**
 
-- **🚀 Concurrent Performance**: Multi-threaded engine for snappy package operations.
-- **✨ Rich Terminal based UI**: Real-time status indicators and polished ASCII dashboard.
-- **🤖 Scripting Ready**: Silent modes and header suppression (`-NoHeader`) for CI/CD.
-- **🛡️ Intelligent Parsing**: Precise conflict resolution and exit-code interpretation.
+`pacwin` unifies **winget**, **chocolatey**, and **scoop** behind a single, `pacman`-inspired interface for Windows. If you've ever typed `pacman -Syu` out of pure muscle memory on a PowerShell prompt—and felt the void when it didn't work—this tool was written for you.
 
 ![pacwin demo](docs/demo.gif)
 
-## Why it exists
+---
 
-Managing software on Windows typically requires interacting with three distinct tools (winget, choco, scoop), each with its own syntax, output formats, and silent failure modes. Existing solutions often lack a unified search across all managers or introduce significant performance overhead by spawning multiple heavy PowerShell processes.
+## The Problem
 
-`pacwin` solves this by:
+You know the drill. You grew up on `pacman`, `apt`, or `dnf`. Package management was a solved problem: one tool, one syntax, done. Then corporate IT handed you a Windows laptop.
 
-- Providing a **single point of entry** for searching and installing packages.
-- Interpreting **cryptic exit codes** (like 3010 or 0x8A15002E) into clear status messages.
-- Using a **Hybrid Engine** (Runspaces/Threads) to execute searches in parallel without spiking CPU usage.
+Now you juggle **three** separate package managers, each with its own quirks:
 
-## Quick start and Installation
+| Pain Point | winget | chocolatey | scoop |
+|:-----------|:-------|:-----------|:------|
+| Search syntax | `winget search` | `choco search` | `scoop search` |
+| Install syntax | `winget install` | `choco install` | `scoop install` |
+| Output format | Column-based, locale-dependent | Pipe-delimited (`\|`) | Bracket-based or columnar |
+| Silent failure mode | Cryptic HRESULT codes | Exit code 1 for everything | Bucket not found, no error |
+| Requires admin? | Sometimes | Almost always | Never |
 
-### Method 1: PowerShell Gallery (Recommended)
+Three tools. Three syntaxes. Three failure modes. Zero consistency. That's not package management—that's archaeology.
 
-The easiest way to install `pacwin` is directly from the [PowerShell Gallery](https://www.powershellgallery.com/packages/pacwin):
+## The Solution
+
+`pacwin` gives you back what Windows took away: **one command to rule them all.**
+
+```
+pacwin -Ss vim        # Search across all managers
+pacwin -S neovim      # Install from the best available source
+pacwin -Syu           # Update everything
+pacwin -R nodejs      # Uninstall cleanly
+pacwin -Q             # List all installed packages
+```
+
+If you can use `pacman`, you already know `pacwin`. And if your team prefers verbose syntax, that works too—`pacwin search`, `pacwin install`, `pacwin update`. No gatekeeping.
+
+### Why Not Just Use [insert wrapper here]?
+
+- Most wrappers spawn a **new PowerShell process per manager**. That's 3+ seconds of overhead on every search.
+- `pacwin` uses a **hybrid concurrency engine**: `RunspacePool` threads on PS 5.1, `ForEach-Object -Parallel` on PS 7+. Same process, shared memory, minimal overhead.
+- Exit codes like `3010` (reboot needed) or `0x8A15002E` (no manifest) are **decoded in real time**, not silently swallowed.
+
+---
+
+## Quick Start
+
+### Install from PowerShell Gallery (Recommended)
 
 ```powershell
 Install-Module -Name pacwin -Scope CurrentUser
 ```
 
-### Method 2: Automated Install (via curl)
+That's it. No `makepkg`, no `PKGBUILD`, no AUR helper—just one line. (We know. It feels wrong. But it works.)
 
-If you want an all-in-one setup that also updates your `$PROFILE`:
+### Install via curl (One-Liner)
+
+For the `curl | sh` crowd (we see you):
 
 ```powershell
 curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | powershell -Command -
 ```
 
-### Method 3: Manual Install (from source)
+### Install from Source
 
-1. Open PowerShell (**Run as Administrator** - recommended for Chocolatey).
-2. Clone and run the installer:
+For those who read every line before running anything (respect):
 
-   ```powershell
-   git clone https://github.com/julesklord/pacwin.git
-   cd pacwin
-   .\install.ps1
-   ```
+```powershell
+git clone https://github.com/julesklord/pacwin.git
+cd pacwin
+.\install.ps1
+```
 
-3. Restart your terminal and search for a package:
+Restart your terminal. Then:
 
-   ```powershell
-   pacwin search vlc
-   ```
+```powershell
+pacwin search vlc
+```
 
-**Expected Output:**
+**Expected output:**
 
 ```text
   #    Name           ID               Version    Source
@@ -75,84 +101,142 @@ curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps
   [2 ] VideoLAN.VLC   VideoLAN.VLC     3.0.21     winget
 ```
 
-## Core Features
+Multiple sources, one table. Pick your poison.
 
-- **Parallel Search**: Aggregates results from all detected managers simultaneously.
-- **Smart Result Picker**: Interactive source selection when a package exists in multiple repositories.
-- **Error Interpretation**: Real-time analysis of installer output to detect reboots or missing manifests.
-- **Security Sanitization**: Regex-based input validation to block command injection.
-- **Support for `-WhatIf`**: Native PowerShell integration to simulate operations before execution.
-- **Low-Resource Engine**: Automatically switches to thread-based execution (Runspaces) in PS 5.1 and Parallel loops in PS 7.
+---
 
-## Installation
+## Command Reference
 
-### Dependencies
+`pacwin` speaks two dialects: **pacman-style flags** for muscle memory, and **verbose commands** for readability. Both are first-class citizens.
 
-- **Windows 10/11**
-- **PowerShell 5.1** or **PowerShell 7+**
-- (Optional) `winget`, `choco`, or `scoop` (at least one must be in your PATH).
+| Task | Verbose | pacman-style |
+|:-----|:--------|:-------------|
+| **Search** | `pacwin search <query>` | `pacwin -Ss <query>` |
+| **Install** | `pacwin install <id>` | `pacwin -S <id>` |
+| **Uninstall** | `pacwin uninstall <id>` | `pacwin -R <id>` |
+| **Update all** | `pacwin update` | `pacwin -Syu` |
+| **List installed** | `pacwin list` | `pacwin -Q` |
+| **Check outdated** | `pacwin outdated` | `pacwin -Qu` |
+| **Hold / Pin** | `pacwin hold <id>` | `pacwin pin <id>` |
+| **Health check** | `pacwin doctor` | `pacwin check` |
+| **Deduplicate** | `pacwin sync` | `pacwin dupes` |
+| **Self-update** | `pacwin self-update` | `pacwin update-self` |
 
-## Usage
+### Filter by Manager
 
-### Common Commands
-
-| Task               | Command                 | Pacman Flag          |
-| :----------------- | :---------------------- | :------------------- |
-| **Search**         | `pacwin search <query>` | `pacwin -Ss <query>` |
-| **Install**        | `pacwin install <id>`   | `pacwin -S <id>`     |
-| **Uninstall**      | `pacwin uninstall <id>` | `pacwin -R <id>`     |
-| **Update**         | `pacwin update [id]`    | `pacwin -Syu`        |
-| **List Installed** | `pacwin list`           | `pacwin -Q`          |
-| **Check Outdated** | `pacwin outdated`       | `pacwin -Qu`         |
-| **Hold (Pin)**     | `pacwin hold <id>`      | `pacwin pin <id>`    |
-| **Health Check**   | `pacwin doctor`         | `pacwin check`       |
-| **Deduplicate**    | `pacwin sync`           | `pacwin dupes`       |
-| **Self-Update**    | `pacwin self-update`    | `pacwin update-self` |
-
-### Identifying Sources
-
-If you want to force a search or install using a specific manager:
+Don't trust one of the backends? Force a specific source:
 
 ```powershell
-pacwin search nodejs -Manager scoop
+pacwin search nodejs -Manager scoop    # scoop only
+pacwin install git -Manager winget     # winget only
 ```
 
-### Advanced Usage
+### Search Timeout
 
-- **Search Timeout**: Control the maximum wait time for parallel searches.
+Some scoop buckets are *glacially* slow. Set a ceiling:
 
-  ```powershell
-  pacwin search git -Timeout 45
-  ```
+```powershell
+pacwin search python -Timeout 45
+```
 
-- **Quiet Mode**: Suppress the banner for scripting.
+### Scripting & CI/CD
 
-  ```powershell
-  pacwin search python -NoHeader
-  ```
+Suppress the banner for automation pipelines:
 
-## Architecture & Design Philosophy
+```powershell
+pacwin search terraform -NoHeader
+```
 
-`pacwin` is built as a **Script Module (.psm1)** for zero-installation overhead.
+Combine with `-WhatIf` for dry runs (native PowerShell `SupportsShouldProcess` integration):
 
-**Runspaces over Jobs**: The primary design goal was to avoid the high CPU usage of `Start-Job`. In PowerShell 5.1, `pacwin` uses a `RunspacePool` to execute CLI calls in background threads within the same process. This reduces startup time for searches by up to 3 seconds compared to traditional background jobs.
+```powershell
+pacwin install docker -WhatIf
+```
+
+---
+
+## Architecture
+
+`pacwin` is a single **Script Module (`.psm1`)** file. No compiled binaries, no DLL hell, no build step. Load it, use it, read it if you want—it's ~1400 lines of annotated PowerShell.
+
+### Concurrency Engine
+
+The core design decision was performance without complexity:
+
+| PowerShell Version | Concurrency Model | Why |
+|:-------------------|:-------------------|:----|
+| **5.1** | `RunspacePool` (threads) | Avoids `Start-Job` overhead (~3s saved per search) |
+| **7+** | `ForEach-Object -Parallel` | Native pipeline parallelism, cleaner syntax |
+
+Both paths execute manager CLI calls concurrently within the **same process**. No child processes, no serialization overhead.
+
+### Parser Architecture
+
+Each manager has a dedicated output parser because, of course, none of them agree on a format:
+
+- **`_pw_parse_winget_lines`** — Heuristic column-boundary detection. Handles locale-dependent headers (Spanish, German, etc.) without hardcoding column names.
+- **`_pw_parse_choco_lines`** — Pipe-delimited (`|`) split with whitespace trimming.
+- **`_pw_parse_scoop_lines`** — Dual-mode: modern bracket format `name (version) [bucket]` and legacy columnar output.
+
+All parsers return `[System.Collections.Generic.List[PSCustomObject]]` with unary comma wrapping to prevent PowerShell's collection unrolling under `Strict Mode 2.0`.
+
+### Security Model
+
+- **Input sanitization** via `_pw_sanitize`: strict regex validation (`a-zA-Z0-9._\-@/`). Anything else is rejected before it reaches a shell call.
+- **Path validation** via `_pw_validate_path`: blocks directory traversal and null-byte injection.
+- **`Set-StrictMode -Version 2.0`** enforced module-wide. No uninitialized variables, no silent property access failures.
+- **No `Invoke-Expression`**. Ever. All external calls go through direct invocation.
+
+### Internal Naming
+
+All internal functions use the `_pw_` prefix to avoid polluting your global namespace. If you `Get-Command _pw_*` after loading the module, that's by design—they're scoped to the module.
+
+---
+
+## Requirements
+
+| Component | Minimum | Recommended |
+|:----------|:--------|:------------|
+| **OS** | Windows 10 | Windows 11 |
+| **PowerShell** | 5.1 | 7.2+ |
+| **Package Managers** | At least one of: `winget`, `choco`, `scoop` | All three in PATH |
+
+Run `pacwin doctor` to verify your environment.
+
+---
+
+## Testing
+
+The test suite uses a **bundled Pester 5.5** module (no global install required):
+
+```powershell
+Import-Module ./tests/modules/Pester
+Invoke-Pester ./tests
+```
+
+Current coverage:
+
+| Suite | Tests | Scope |
+|:------|:------|:------|
+| `pacwin.Tests.ps1` | 12 | Core logic, security, command dispatch, parsers, string truncation |
+| `parsers.Tests.ps1` | 12 | Scoop multi-format, choco pipe-split, edge cases, legacy formats |
+| **Total** | **24** | All passing ✅ |
+
+---
 
 ## Contributing
 
-1. **Reporting Issues**: Use the GitHub issue tracker.
-2. **Testing**: Run the test suite using the bundled Pester 5 engine:
+1. **Issues**: Use the [GitHub issue tracker](https://github.com/julesklord/pacwin/issues). Bug reports with `pacwin doctor` output are appreciated.
+2. **Pull Requests**: Fork, branch, test, PR. Keep the `_pw_` prefix convention. Run the full test suite before submitting.
+3. **Code Style**: Single `.psm1` file, `#region` blocks for organization, `Strict Mode 2.0` compliance mandatory.
 
-   ```powershell
-   # Use the local Pester module to avoid version conflicts
-   Import-Module ./tests/modules/Pester
-   Invoke-Pester ./tests/pacwin.Tests.ps1
-   ```
-
-3. **Internal Functions**: All core logic resides in `_pw_` prefixed functions to avoid polluting your global namespace.
+---
 
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
+
+Use it, fork it, ship it. Just don't blame us if you start missing `pacman` even *more*.
 
 ---
 
@@ -160,5 +244,5 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 - **Status**: Stable (v0.2.6)
 - **Requirements**: Windows PowerShell 5.1 or PS 7.2+
-- **Maintainers**: julesklord
-- **Known issues**: Scoop searches can timeout if bucket metadata is stale; run `scoop update` to fix.
+- **Maintainers**: [julesklord](https://github.com/julesklord)
+- **Known issues**: Scoop searches can timeout if bucket metadata is stale — run `scoop update` to refresh. Same energy as `pacman -Syy`, different tool.
