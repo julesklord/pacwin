@@ -2,10 +2,10 @@
 #  pacwin.psm1  -  Universal Package Layer for Windows
 #  Abstraction over: winget | chocolatey | scoop
 #  Compatible: PowerShell 5.1 + PowerShell 7+
-#  v0.2.5 (Fixes & Stability)
+#  v0.2.6 (Security & Testing Hardening)
 # ============================================================
 
-Set-StrictMode -Off
+Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Continue"
 
 # Force UTF8 for better character rendering in PS 5.1
@@ -16,12 +16,24 @@ if ($PSVersionTable.PSVersion.Major -lt 6) {
 #region -- Security & Validation -----------------------------
 
 function _pw_sanitize {
+    # Validates general input: allowed characters are a-z, A-Z, 0-9, ., _, -, @, /
     param([string]$targetInput)
     if (-not $targetInput) { return $null }
     if ($targetInput -match '^[a-zA-Z0-9\._\-@/]+$') {
         return $targetInput
     }
     _pw_color "  [!] Input detected as a potential security risk: '$targetInput'" Red
+    return $null
+}
+
+function _pw_validate_path {
+    # Validates file paths: allowed characters are \ / : . - _ a-z A-Z 0-9
+    param([string]$pathInput)
+    if (-not $pathInput) { return $null }
+    if ($pathInput -match '^[a-zA-Z0-9\._\-@/\\:]+$') {
+        return $pathInput
+    }
+    _pw_color "  [!] Path input detected as a potential security risk: '$pathInput'" Red
     return $null
 }
 
@@ -48,7 +60,7 @@ function _pw_header {
     _pw_color ""
     _pw_color "  >> " Cyan -NoNewline
     _pw_color "pacwin" White -NoNewline
-    _pw_color " v0.2.5" DarkGray -NoNewline
+    _pw_color " v0.2.6" DarkGray -NoNewline
     _pw_color "  --  " DarkGray -NoNewline
     _pw_color "universal package layer" DarkGray
 
@@ -613,7 +625,7 @@ function pacwin {
 
         "^(version|--version|-v)$" {
             _pw_color "  pacwin" White -NoNewline
-            _pw_color " v0.2.5" Gray
+            _pw_color " v0.2.6" Gray
         }
 
         Default {
@@ -1250,6 +1262,26 @@ function _pw_do_info {
     }
 }
 
+$script:ErrorCodes = @{
+    "winget" = @{
+        "0"           = "Success"
+        "-1978335186" = "Success (Restart required to complete)"
+        "-1978335215" = "Network or Source Error (Check connectivity)"
+        "-1978334812" = "Installer failed with exit code"
+    }
+    "choco" = @{
+        "0"    = "Success"
+        "1641" = "Success (Restart required to complete)"
+        "3010" = "Success (Restart required to complete)"
+        "1603" = "Fatal error during installation (Try running as Administrator)"
+        "-1"   = "General error (Check logs)"
+    }
+    "scoop" = @{
+        "0" = "Success"
+        "1" = "Generic failure (Check bucket status or permissions)"
+    }
+}
+
 function _pw_handle_result {
     param(
         [string]$manager,
@@ -1263,16 +1295,22 @@ function _pw_handle_result {
 
     switch ($manager) {
         "winget" {
-            if ($exitCode -eq 0) { $success = $true }
-            elseif ($exitCode -eq -1978335186) { $msg = "Restart required to complete." }
-            else { $msg = "Winget Error (Code: $exitCode)." }
+            $codeStr = [string]$exitCode
+            if ($script:ErrorCodes["winget"].Contains($codeStr)) {
+                $msg = $script:ErrorCodes["winget"][$codeStr]
+                if ($exitCode -eq 0 -or $exitCode -eq -1978335186) { $success = $true }
+            } else {
+                $msg = "Winget Error (Code: $exitCode)."
+            }
         }
         "choco" {
-            if ($exitCode -eq 0 -or $exitCode -eq 1641 -or $exitCode -eq 3010) { 
-                $success = $true 
-                if ($exitCode -ne 0) { $msg = "Success (Restart required)." }
+            $codeStr = [string]$exitCode
+            if ($script:ErrorCodes["choco"].Contains($codeStr)) {
+                $msg = $script:ErrorCodes["choco"][$codeStr]
+                if ($exitCode -eq 0 -or $exitCode -eq 1641 -or $exitCode -eq 3010) { $success = $true }
+            } else {
+                $msg = "Chocolatey Error (Code: $exitCode)."
             }
-            else { $msg = "Chocolatey Error (Code: $exitCode)." }
         }
         "scoop" {
             if ($outputText -match "installed successfully|already installed") {
@@ -1283,6 +1321,10 @@ function _pw_handle_result {
                 $msg = "Scoop Error: " + ($output | Select-String "Error:" | Select-Object -First 1)
             }
             else {
+                $codeStr = [string]$exitCode
+                if ($script:ErrorCodes["scoop"].Contains($codeStr)) {
+                    $msg = $script:ErrorCodes["scoop"][$codeStr]
+                }
                 $success = ($exitCode -eq 0)
             }
         }

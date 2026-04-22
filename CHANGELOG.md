@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] - 2026-04-21
+
+### Added
+
+- **Comprehensive Parser Tests**: Reached full coverage for the winget, chocolatey, and scoop output parsers via Pester.
+- **Strict Mode Enforcement**: Activated `Set-StrictMode -Version 2.0` to guarantee high code quality and prevent uninitialized variable usage.
+- **Advanced Security Hardening**: Implemented robust path validation (`_pw_validate_path`) and expanded OWASP-style injection tests for input sanitization (`_pw_sanitize`), replacing double quotes with single quotes to block early variable expansion.
+
+### Changed
+
+- **Centralized Error Mapping**: Replaced raw switch statements with a hash map (`$script:ErrorCodes`) for clean, uniform exit-code handling across all package managers.
+
 ## [0.2.5] - 2026-04-21
 
 ### Fixed

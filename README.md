@@ -158,7 +158,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ### Metadata
 
-- **Status**: Stable (v0.2.5)
+- **Status**: Stable (v0.2.6)
 - **Requirements**: Windows PowerShell 5.1 or PS 7.2+
 - **Maintainers**: julesklord
 - **Known issues**: Scoop searches can timeout if bucket metadata is stale; run `scoop update` to fix.

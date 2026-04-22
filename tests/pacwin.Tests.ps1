@@ -65,7 +65,10 @@ Describe "pacwin core logic" {
 
         It "Blocks dangerous input" {
             InModuleScope pacwin {
-                _pw_sanitize "bad; comando" | Should -Be $null
+                _pw_sanitize 'bad; comando' | Should -Be $null
+                _pw_sanitize "'; rm -r /'" | Should -Be $null
+                _pw_sanitize '$(whoami)' | Should -Be $null
+                _pw_sanitize '`Get-Process`' | Should -Be $null
             }
         }
     }
@@ -82,6 +85,55 @@ Describe "pacwin core logic" {
             # Test 'sync'
             $null = pacwin sync
             Assert-MockCalled _pw_do_sync -ModuleName pacwin -Times 1 -Exactly
+        }
+    }
+
+    Context "Parsers" {
+        It "Parses winget table output" {
+            InModuleScope pacwin {
+                $lines = @(
+                    "Name               Id               Version     Source",
+                    "------------------------------------------------------",
+                    "Google Chrome      Google.Chrome    120.0.0.0   winget",
+                    "Mozilla Firefox    Mozilla.Firefox  121.0       winget"
+                )
+                $res = _pw_parse_winget_lines $lines
+                $res.Count | Should -Be 2
+                $res[0].Name | Should -Be "Google Chrome"
+                $res[0].ID | Should -Be "Google.Chrome"
+                $res[0].Version | Should -Be "120.0.0.0"
+                $res[0].Source | Should -Be "winget"
+            }
+        }
+
+        It "Parses choco limit-output" {
+            InModuleScope pacwin {
+                $lines = @(
+                    "googlechrome|120.0.0.0",
+                    "firefox|121.0"
+                )
+                $res = _pw_parse_choco_lines $lines
+                $res.Count | Should -Be 2
+                $res[0].Name | Should -Be "googlechrome"
+                $res[0].ID | Should -Be "googlechrome"
+                $res[0].Version | Should -Be "120.0.0.0"
+                $res[1].Name | Should -Be "firefox"
+            }
+        }
+
+        It "Parses scoop multi-format output" {
+            InModuleScope pacwin {
+                $lines = @(
+                    "Results from main bucket:",
+                    "    bat (0.24.0)",
+                    "    neovim (0.9.4)"
+                )
+                $res = _pw_parse_scoop_lines $lines
+                $res.Count | Should -Be 2
+                $res[0].Name | Should -Be "bat"
+                $res[0].ID | Should -Be "bat"
+                $res[0].Version | Should -Be "0.24.0"
+            }
         }
     }
 }
