@@ -1,319 +1,365 @@
 <!DOCTYPE html>
-
-<html class="" lang="en"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#006190", secondary: "#3e692b", background: "#f9f9f9", surface: "#f9f9f9", "surface-container": "#eeeeee", "outline-variant": "#bfc7d1", "on-surface-variant": "#3f4850", "on-surface": "#1a1c1c", "inverse-primary": "#8ecdff", "secondary-fixed-dim": "#a3d489", "tertiary-fixed-dim": "#c7c6c6", "on-error": "#ffffff", "primary-fixed-dim": "#8ecdff", "on-tertiary-fixed": "#1b1c1c", "on-background": "#1a1c1c", "surface-bright": "#f9f9f9", "surface-container-highest": "#e2e2e2", "primary-fixed": "#cbe6ff", "primary-container": "#007bb5", "on-error-container": "#93000a", "surface-container-high": "#e8e8e8", "error-container": "#ffdad6", "on-secondary-container": "#446f30", error: "#ba1a1a", "inverse-surface": "#2f3131", "on-tertiary-container": "#fefcfc", "surface-dim": "#dadada", "surface-tint": "#006494", outline: "#6f7881", "on-tertiary-fixed-variant": "#464747", "surface-variant": "#e2e2e2", "tertiary-fixed": "#e3e2e2", "secondary-fixed": "#bef1a3", "on-primary-container": "#fcfcff", "on-secondary": "#ffffff", "surface-container-lowest": "#ffffff", "on-tertiary": "#ffffff", "inverse-on-surface": "#f0f1f1", "secondary-container": "#bef1a3", "tertiary-container": "#747474", "on-primary-fixed-variant": "#004b71", "on-secondary-fixed": "#062100", tertiary: "#5c5c5c", "on-primary-fixed": "#001e30", "on-secondary-fixed-variant": "#275015", "surface-container-low": "#f3f3f4", "on-primary": "#ffffff"}, borderRadius: {DEFAULT: "0.125rem", lg: "0.25rem", xl: "0.5rem", full: "0.75rem"}, fontFamily: {mono: ["Fira Code", "JetBrains Mono", "Consolas", "monospace"], "body-base": ["Inter"], "display-lg": ["Inter"], "headline-md": ["Inter"], "label-caps": ["Inter"]}, fontSize: {"body-base": ["16px", {lineHeight: "1.5", letterSpacing: "0", fontWeight: "400"}], "display-lg": ["40px", {lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "700"}], "label-caps": ["12px", {lineHeight: "1.0", letterSpacing: "0.05em", fontWeight: "600"}], "headline-md": ["24px", {lineHeight: "1.3", letterSpacing: "-0.01em", fontWeight: "600"}]}, spacing: {gutter: "1rem", "container-max": "1280px", sm: "0.5rem", md: "1rem", xs: "0.25rem", base: "4px", lg: "1.5rem", xl: "2rem"}}}};</script>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>pacwin — Universal Package Manager for Windows</title>
+<meta name="description" content="pacwin unifies winget, chocolatey, and scoop under a single pacman-inspired CLI for Windows. One command. Three managers. Zero excuses."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
 <style>
-        body {
-            background-color: #0C0C0C;
-            color: #CCCCCC;
-            -webkit-font-smoothing: antialiased;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .terminal-border {
-            border: 1px solid #333333;
-        }
-        .accent-border-blue {
-            border-left: 2px solid #8ecdff;
-        }
-        .accent-border-green {
-            border-left: 2px solid #a3d489;
-        }
-        .scanline {
-            width: 100%;
-            height: 2px;
-            background: #8ecdff;
-            position: relative;
-            overflow: hidden;
-        }
-        .scanline::after {
-            content: "";
-            position: absolute;
-            width: 30%;
-            height: 100%;
-            background: #8ecdff;
-            box-shadow: 0 0 10px #8ecdff;
-            animation: move 3s infinite linear;
-        }
-        @keyframes move {
-            0% { left: -30%; }
-            100% { left: 100%; }
-        }
-        * {
-            border-radius: 0 !important;
-        }
-        .win-btn:hover {
-            background-color: #333333;
-        }
-        .win-close:hover {
-            background-color: #E81123 !important;
-            color: white !important;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        th, td {
-            border: 1px solid #333333;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #161616;
-            color: #8ecdff;
-        }
-    </style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#4fc3f7;
+  --green:#69f0ae;
+  --red:#ef5350;
+  --bg:#0a0a0f;
+  --bg2:#0f0f1a;
+  --surface:#141420;
+  --border:#1e1e30;
+  --border2:#2a2a40;
+  --text:#c9d1d9;
+  --muted:#6e7681;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Inter',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
+
+/* Grid bg */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:40px 40px;
+  opacity:.4;pointer-events:none;z-index:0;
+}
+
+/* Glow orbs */
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.orb1{width:600px;height:600px;top:-200px;left:-200px;background:radial-gradient(circle,rgba(79,195,247,.12),transparent 70%)}
+.orb2{width:500px;height:500px;bottom:-100px;right:-100px;background:radial-gradient(circle,rgba(105,240,174,.08),transparent 70%)}
+
+/* Layout */
+.container{max-width:1100px;margin:0 auto;padding:0 2rem;position:relative;z-index:1}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);backdrop-filter:blur(16px);background:rgba(10,10,15,.85)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;padding:.85rem 2rem;max-width:1100px;margin:0 auto}
+.logo{font-size:1.1rem;font-weight:700;color:var(--blue);letter-spacing:-.02em}
+.logo span{color:var(--green)}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;transition:color .2s}
+.nav-links a:hover{color:var(--blue)}
+.nav-badge{background:var(--surface);border:1px solid var(--border2);padding:.25rem .6rem;font-size:.7rem;color:var(--green)}
+
+/* HERO */
+.hero{padding:6rem 0 4rem;text-align:center}
+.hero-tag{display:inline-block;border:1px solid var(--border2);color:var(--muted);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;padding:.3rem .8rem;margin-bottom:2rem}
+.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:700;line-height:1.1;letter-spacing:-.03em;margin-bottom:1.5rem}
+.hero h1 .hl-blue{color:var(--blue)}
+.hero h1 .hl-green{color:var(--green)}
+.hero-sub{color:var(--muted);font-size:1rem;max-width:560px;margin:0 auto 2.5rem;line-height:1.7}
+.hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.6rem;font-family:var(--mono);font-size:.8rem;font-weight:700;letter-spacing:.05em;cursor:pointer;text-decoration:none;transition:all .2s;text-transform:uppercase}
+.btn-primary{background:var(--blue);color:#000;border:1px solid var(--blue)}
+.btn-primary:hover{background:transparent;color:var(--blue)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue)}
+
+/* TERMINAL WINDOW */
+.terminal-wrap{max-width:700px;margin:3rem auto 0;background:var(--bg2);border:1px solid var(--border2);overflow:hidden}
+.terminal-bar{background:#1c1c2e;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.t-dots{display:flex;gap:.4rem}
+.t-dot{width:10px;height:10px;border-radius:50%}
+.t-dot.r{background:#ef5350}.t-dot.y{background:#ffa726}.t-dot.g{background:#66bb6a}
+.t-title{font-size:.7rem;color:var(--muted)}
+.terminal-body{padding:1.5rem;font-size:.82rem;line-height:2}
+.t-prompt{color:var(--blue)}
+.t-cmd{color:var(--green)}
+.t-comment{color:var(--muted)}
+.t-out{color:var(--text);padding-left:1.2rem}
+.scanline{height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);animation:scan 3s linear infinite}
+@keyframes scan{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+/* STATS BAR */
+.stats{display:flex;gap:0;border:1px solid var(--border2);margin:4rem 0;overflow:hidden}
+.stat{flex:1;padding:1.5rem;text-align:center;border-right:1px solid var(--border2)}
+.stat:last-child{border-right:none}
+.stat-num{font-size:1.8rem;font-weight:700;color:var(--blue)}
+.stat-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:.25rem}
+
+/* SECTION */
+section{padding:4rem 0;border-top:1px solid var(--border)}
+.section-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem}
+.section-title{font-size:1.4rem;font-weight:700;color:var(--text);margin-bottom:.75rem}
+.section-title span{color:var(--blue)}
+.section-desc{color:var(--muted);font-size:.85rem;line-height:1.7;max-width:500px}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;margin-top:2rem}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{background:var(--surface);color:var(--blue);padding:.6rem 1rem;text-align:left;border:1px solid var(--border2);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+tbody td{padding:.6rem 1rem;border:1px solid var(--border);color:var(--text);vertical-align:middle}
+tbody tr:hover td{background:var(--surface);border-color:var(--border2)}
+.td-verb{color:var(--green)}
+.td-flag{color:var(--blue)}
+.td-pain{color:var(--red)}
+
+/* FEATURES GRID */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-top:2rem}
+.feat-card{background:var(--surface);border:1px solid var(--border2);padding:1.5rem;transition:border-color .2s,transform .2s}
+.feat-card:hover{border-color:var(--blue);transform:translateY(-2px)}
+.feat-icon{font-size:1.4rem;margin-bottom:.75rem}
+.feat-title{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;color:var(--text)}
+.feat-desc{font-size:.75rem;color:var(--muted);line-height:1.6}
+
+/* INSTALL */
+.install-box{background:var(--bg2);border:1px solid var(--border2);padding:1.5rem;margin-top:1.5rem}
+.install-row{display:flex;align-items:flex-start;gap:.75rem;margin-bottom:.5rem}
+.install-row:last-child{margin-bottom:0}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:2.5rem 0}
+.footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+.footer-logo{font-size:1rem;font-weight:700;color:var(--blue)}
+.footer-links{display:flex;gap:1.5rem}
+.footer-links a{color:var(--muted);font-size:.7rem;text-decoration:none;text-transform:uppercase;letter-spacing:.06em;transition:color .2s}
+.footer-links a:hover{color:var(--blue)}
+.status-pill{display:flex;align-items:center;gap:.5rem;font-size:.65rem;color:var(--green);text-transform:uppercase;letter-spacing:.08em}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Responsive */
+@media(max-width:640px){
+  .stats{flex-direction:column}
+  .stat{border-right:none;border-bottom:1px solid var(--border2)}
+  .nav-links{display:none}
+  .hero{padding:4rem 0 2rem}
+}
+</style>
 </head>
-<body class="bg-background text-on-surface selection:bg-primary selection:text-black">
-<!-- Header: TopNavBar -->
-<header class="bg-background border-b border-outline-variant sticky top-0 z-50">
-<div class="flex justify-between items-center px-8 py-3 w-full max-w-7xl mx-auto">
-<div class="text-xl font-bold tracking-tight text-primary">
-            C:\&gt; pacwin_
-        </div>
-<nav class="hidden md:flex items-center space-x-8">
-<a class="text-primary border-b-1 border-primary" href="#">[ Home ]</a>
-<a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Documentation</a>
-<a class="text-on-surface-variant hover:text-primary transition-colors" href="#">GitHub</a>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="logo">C:\&gt; pac<span>win</span>_</div>
+    <ul class="nav-links">
+      <li><a href="#install">Install</a></li>
+      <li><a href="#commands">Commands</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="https://github.com/julesklord/pacwin" target="_blank">GitHub</a></li>
+    </ul>
+    <span class="nav-badge">v0.2.6</span>
+  </div>
 </nav>
-<div class="flex items-center gap-4">
-<div class="flex items-center gap-2 border border-outline-variant px-2 py-1 text-xs">
-<span class="text-secondary font-bold">v0.2.6</span>
-</div>
-<button class="p-2 text-secondary hover:bg-surface transition-colors">
-<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
-</button>
-</div>
-</div>
-</header>
-<main>
-<!-- Hero Section -->
-<section class="pt-20 pb-16 px-8">
-<div class="max-w-7xl mx-auto flex flex-col items-center text-center">
-<div class="mb-10">
-<img alt="pacwin_ logo" class="max-w-xs object-contain" src="https://lh3.googleusercontent.com/aida/ADBb0uh6-JPQ6Nei0pYjBBJpRta8N50JOOC7mrsR-ek4_38ysvAl6zN1sfdkdyuHzU66c0Isiq0hXtQRUgdeIjayWqCaCJZEPW5Tkj9n11IXGLyy4PIGr1EkOzJULc6dt0rV57ioLBW-AW9j6T0IQGQXp1mxG_wlc3-xziHG3aikV2VPXOh62N3BukoyDxXhfQIuO1LTr0n80NdMRKBuQ1PdU824oBKOtcuQ9MgxQSlTRjIrT0WeCbx2EGmTvXQrEYfDx9ZGBFqzaa-H"/>
-</div>
-<h1 class="font-display-lg text-4xl text-primary mb-6 font-bold uppercase tracking-widest">
-                PACWIN.EXE
-            </h1>
-<p class="max-w-2xl text-on-surface-variant text-lg leading-relaxed font-mono">
-                [SYSTEM] One CLI. Three managers. Zero excuses for missing `pacman`.
-            </p>
-<p class="mt-4 max-w-2xl text-on-surface-variant text-sm leading-relaxed font-mono">
-                `pacwin` unifies winget, chocolatey, and scoop behind a single, pacman-inspired interface for Windows.
-            </p>
-<div class="mt-12 flex flex-wrap justify-center gap-0">
-<button class="bg-primary text-black px-8 py-3 font-bold border border-primary hover:bg-transparent hover:text-primary transition-all flex items-center gap-2">
-<span class="material-symbols-outlined text-sm" data-icon="download">download</span>
-                    GET_STARTED.SH
-                </button>
-<button class="border border-outline-variant text-on-surface px-8 py-3 font-bold hover:bg-surface transition-all">
-                    VIEW_SOURCE
-                </button>
-</div>
-</div>
-</section>
-<!-- Terminal Section -->
-<section class="py-16 px-8 border-t border-outline-variant">
-<div class="max-w-4xl mx-auto">
-<div class="mb-4 flex items-center gap-2">
-<span class="text-secondary font-mono text-sm uppercase tracking-tighter">-- installation_routine</span>
-</div>
-<div class="bg-black border border-outline-variant shadow-none">
-<!-- Windows Style Header -->
-<div class="bg-[#1E1E1E] px-4 py-1 border-b border-outline-variant flex items-center justify-between">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-sm text-primary" data-icon="terminal">terminal</span>
-<span class="font-mono text-xs text-on-surface-variant">Administrator: Windows PowerShell</span>
-</div>
-<div class="flex">
-<button class="win-btn px-3 py-1 text-xs text-on-surface-variant">
-<span class="material-symbols-outlined text-sm" data-icon="minimize">minimize</span>
-</button>
-<button class="win-btn px-3 py-1 text-xs text-on-surface-variant">
-<span class="material-symbols-outlined text-sm" data-icon="check_box_outline_blank">check_box_outline_blank</span>
-</button>
-<button class="win-close px-3 py-1 text-xs text-on-surface-variant">
-<span class="material-symbols-outlined text-sm" data-icon="close">close</span>
-</button>
-</div>
-</div>
-<div class="p-8 relative group">
-<div class="flex items-start gap-3 mb-2">
-<span class="text-primary font-bold">PS C:\&gt;</span>
-<code class="font-mono text-secondary block overflow-x-auto whitespace-pre-wrap leading-relaxed">Install-Module -Name pacwin -Scope CurrentUser</code>
-</div>
-<div class="flex items-start gap-3 mb-2 mt-4 text-on-surface-variant text-xs">
-<span># Or via curl:</span>
-</div>
-<div class="flex items-start gap-3 mb-2">
-<span class="text-primary font-bold">PS C:\&gt;</span>
-<code class="font-mono text-secondary block overflow-x-auto whitespace-pre-wrap leading-relaxed">curl -sSL https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | powershell -Command -</code>
-</div>
-<button class="absolute top-4 right-4 border border-outline-variant bg-surface hover:border-primary text-on-surface p-2 transition-all opacity-0 group-hover:opacity-100">
-<span class="material-symbols-outlined text-sm" data-icon="content_copy">content_copy</span>
-</button>
-</div>
-<div class="scanline"></div>
-</div>
-<p class="mt-4 text-center text-on-surface-variant text-xs font-mono uppercase">
-                REQ: PS_VERSION &gt;= 5.1 | OS: WINDOWS 10+
-            </p>
-</div>
-</section>
-<!-- The Pain Point Section -->
-<section class="py-16 px-8 max-w-7xl mx-auto border-t border-outline-variant">
-<div class="mb-10">
-<h3 class="font-bold text-2xl text-primary mb-4 flex items-center gap-3 border-b border-outline-variant pb-2">
-        [ 01_THE_PAIN_POINT ]
-    </h3>
-<p class="text-on-surface-variant mb-8 text-sm">
-        Three tools. Three syntaxes. Three failure modes. Zero consistency.
+
+<!-- HERO -->
+<div class="container">
+  <div class="hero">
+    <div class="hero-tag">// PowerShell Module — Windows 10+ — PS 5.1+</div>
+    <h1>
+      One CLI.<br/>
+      <span class="hl-blue">Three managers.</span><br/>
+      <span class="hl-green">Zero excuses.</span>
+    </h1>
+    <p class="hero-sub">
+      pacwin unifies winget, chocolatey, and scoop behind a single pacman-inspired interface. Search, install, remove, and update packages across all three — with one command.
     </p>
+    <div class="hero-btns">
+      <a href="#install" class="btn btn-primary">⬇ Get Started</a>
+      <a href="https://github.com/julesklord/pacwin" target="_blank" class="btn btn-ghost">View Source →</a>
+    </div>
+  </div>
+
+  <!-- TERMINAL DEMO -->
+  <div class="terminal-wrap">
+    <div class="terminal-bar">
+      <div class="t-dots">
+        <div class="t-dot r"></div>
+        <div class="t-dot y"></div>
+        <div class="t-dot g"></div>
+      </div>
+      <span class="t-title">Administrator: Windows PowerShell</span>
+      <span style="width:60px"></span>
+    </div>
+    <div class="terminal-body">
+      <div><span class="t-prompt">PS C:\&gt; </span><span class="t-cmd">pacwin -Ss vlc</span></div>
+      <div class="t-out">[1] VLC media player &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VideoLAN.VLC &nbsp; 3.0.23 &nbsp; winget</div>
+      <div class="t-out">[2] vlc &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vlc &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 3.0.23 &nbsp; choco</div>
+      <div>&nbsp;</div>
+      <div><span class="t-prompt">PS C:\&gt; </span><span class="t-cmd">pacwin -S VideoLAN.VLC</span></div>
+      <div class="t-out" style="color:var(--green)">[✓] Installed VideoLAN.VLC via winget</div>
+      <div>&nbsp;</div>
+      <div><span class="t-prompt">PS C:\&gt; </span><span class="t-comment"># Or use verbose commands</span></div>
+      <div><span class="t-prompt">PS C:\&gt; </span><span class="t-cmd">pacwin search firefox</span></div>
+    </div>
+    <div class="scanline"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat"><div class="stat-num">3</div><div class="stat-lbl">Package Managers</div></div>
+    <div class="stat"><div class="stat-num">1</div><div class="stat-lbl">Unified CLI</div></div>
+    <div class="stat"><div class="stat-num">0</div><div class="stat-lbl">External Deps</div></div>
+    <div class="stat"><div class="stat-num">PS 5.1</div><div class="stat-lbl">Min Version</div></div>
+  </div>
+
+  <!-- INSTALL -->
+  <section id="install">
+    <div class="section-label">// 01_installation</div>
+    <div class="section-title">Get <span>pacwin</span> running in 30 seconds</div>
+    <p class="section-desc">No build step. No binary. Just a PowerShell module you can pipe and run.</p>
+    <div class="install-box">
+      <div class="install-row">
+        <span class="t-prompt">PS C:\&gt;</span>
+        <code style="color:var(--green);font-size:.82rem">iwr -useb https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | iex</code>
+      </div>
+      <div style="color:var(--muted);font-size:.72rem;padding-left:1.2rem;margin:.5rem 0">— or via PowerShell Gallery —</div>
+      <div class="install-row">
+        <span class="t-prompt">PS C:\&gt;</span>
+        <code style="color:var(--green);font-size:.82rem">Install-Module -Name pacwin -Scope CurrentUser</code>
+      </div>
+    </div>
+    <p style="margin-top:.75rem;font-size:.7rem;color:var(--muted)">REQ: PowerShell 5.1+ &nbsp;|&nbsp; Windows 10+ &nbsp;|&nbsp; At least one of: winget, choco, scoop in PATH</p>
+  </section>
+
+  <!-- COMMANDS -->
+  <section id="commands">
+    <div class="section-label">// 02_command_reference</div>
+    <div class="section-title"><span>pacwin</span> speaks two dialects</div>
+    <p class="section-desc">pacman-style flags for muscle memory. Verbose commands for readability. Both work.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Task</th><th>Verbose</th><th>pacman-style</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Search packages</td><td class="td-verb">pacwin search &lt;query&gt;</td><td class="td-flag">pacwin -Ss &lt;query&gt;</td></tr>
+          <tr><td>Install a package</td><td class="td-verb">pacwin install &lt;id&gt;</td><td class="td-flag">pacwin -S &lt;id&gt;</td></tr>
+          <tr><td>Uninstall a package</td><td class="td-verb">pacwin uninstall &lt;id&gt;</td><td class="td-flag">pacwin -R &lt;id&gt;</td></tr>
+          <tr><td>Update all packages</td><td class="td-verb">pacwin update</td><td class="td-flag">pacwin -Syu</td></tr>
+          <tr><td>List installed</td><td class="td-verb">pacwin list</td><td class="td-flag">pacwin -Q</td></tr>
+          <tr><td>Check outdated</td><td class="td-verb">pacwin outdated</td><td class="td-flag">pacwin -Qu</td></tr>
+          <tr><td>Pin / Hold version</td><td class="td-verb">pacwin hold &lt;id&gt;</td><td class="td-flag">pacwin pin &lt;id&gt;</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:1rem">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Flag</th><th>Effect</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td class="td-flag">-Manager</td><td>Target a specific manager</td><td class="td-verb">pacwin search git -Manager winget</td></tr>
+            <tr><td class="td-flag">-Limit</td><td>Max results per manager (default 40)</td><td class="td-verb">pacwin search node -Limit 10</td></tr>
+            <tr><td class="td-flag">-NoHeader</td><td>Skip the header banner</td><td class="td-verb">pacwin list -NoHeader</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY / PAIN POINT -->
+  <section>
+    <div class="section-label">// 03_the_problem</div>
+    <div class="section-title">Three tools. Three syntaxes. <span>Three headaches.</span></div>
+    <p class="section-desc">Without pacwin, every package manager speaks a different dialect.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Operation</th><th>winget</th><th>choco</th><th>scoop</th><th style="color:var(--green)">pacwin</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Search</td>
+            <td class="td-pain">winget search</td>
+            <td class="td-pain">choco search</td>
+            <td class="td-pain">scoop search</td>
+            <td class="td-verb">pacwin -Ss</td>
+          </tr>
+          <tr>
+            <td>Install</td>
+            <td class="td-pain">winget install</td>
+            <td class="td-pain">choco install</td>
+            <td class="td-pain">scoop install</td>
+            <td class="td-verb">pacwin -S</td>
+          </tr>
+          <tr>
+            <td>Error handling</td>
+            <td class="td-pain">HRESULT codes</td>
+            <td class="td-pain">Exit code 1 for everything</td>
+            <td class="td-pain">Silent failures</td>
+            <td class="td-verb">Normalized output</td>
+          </tr>
+          <tr>
+            <td>Parallel search</td>
+            <td class="td-pain">No</td>
+            <td class="td-pain">No</td>
+            <td class="td-pain">No</td>
+            <td class="td-verb">Yes (RunspacePool)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <div class="section-label">// 04_architecture</div>
+    <div class="section-title">Built for <span>real engineers</span></div>
+    <p class="section-desc">No-nonsense engineering. No bloat. No compiled binaries. Just PowerShell done right.</p>
+    <div class="features">
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-title">Concurrency Engine</div>
+        <div class="feat-desc">RunspacePool on PS 5.1. ForEach-Object -Parallel on PS 7+. Searches all three managers simultaneously — same process, shared memory.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔒</div>
+        <div class="feat-title">Security Model</div>
+        <div class="feat-desc">Strict regex input sanitization. Set-StrictMode -Version 2.0. No Invoke-Expression. Ever. Injection-resistant by design.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📦</div>
+        <div class="feat-title">Zero Dependencies</div>
+        <div class="feat-desc">Single .psm1 module. No compiled binaries, no DLL hell, no NuGet ceremony. Clone and import — done.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🎯</div>
+        <div class="feat-title">Manager Filtering</div>
+        <div class="feat-desc">Target winget, choco, or scoop individually with -Manager. Mix and match as needed without changing your workflow.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🖥️</div>
+        <div class="feat-title">Premium TUI</div>
+        <div class="feat-desc">ASCII tables, aligned columns, real-time progress indicators, colored output, and numbered selection — like a package manager should look.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🏴‍☠️</div>
+        <div class="feat-title">pacman Compat</div>
+        <div class="feat-desc">-S, -Ss, -R, -Q, -Syu — the flags you already know from Arch Linux. Full proxy wrapper so PowerShell doesn't fight you.</div>
+      </div>
+    </div>
+  </section>
 </div>
-<div class="overflow-x-auto">
-<table class="font-mono text-sm w-full">
-<thead>
-<tr>
-<th>Pain Point</th>
-<th>winget</th>
-<th>chocolatey</th>
-<th>scoop</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="text-secondary">Search syntax</td>
-<td>`winget search`</td>
-<td>`choco search`</td>
-<td>`scoop search`</td>
-</tr>
-<tr>
-<td class="text-secondary">Install syntax</td>
-<td>`winget install`</td>
-<td>`choco install`</td>
-<td>`scoop install`</td>
-</tr>
-<tr>
-<td class="text-secondary">Output format</td>
-<td>Column-based, locale-dependent</td>
-<td>Pipe-delimited (`|`)</td>
-<td>Bracket-based or columnar</td>
-</tr>
-<tr>
-<td class="text-secondary">Silent failure mode</td>
-<td>Cryptic HRESULT codes</td>
-<td>Exit code 1 for everything</td>
-<td>Bucket not found, no error</td>
-</tr>
-<tr>
-<td class="text-secondary">Requires admin?</td>
-<td>Sometimes</td>
-<td>Almost always</td>
-<td>Never</td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<!-- Core Documentation Section -->
-<section class="py-16 px-8 max-w-7xl mx-auto border-t border-outline-variant">
-<div class="grid grid-cols-1 md:grid-cols-2 gap-16">
-<!-- Column 1: Basic Usage -->
-<div class="space-y-8">
-<div>
-<h3 class="font-bold text-xl text-primary mb-6 flex items-center gap-3 border-b border-outline-variant pb-2">
-                        [ 02_COMMAND_REFERENCE ]
-                    </h3>
-<p class="text-on-surface-variant mb-8 text-sm">
-                        `pacwin` speaks two dialects: pacman-style flags for muscle memory, and verbose commands for readability.
-                    </p>
-</div>
-<div class="space-y-2">
-<div class="overflow-x-auto">
-<table class="font-mono text-xs w-full">
-<thead>
-<tr>
-<th>Task</th>
-<th>Verbose</th>
-<th>pacman-style</th>
-</tr>
-</thead>
-<tbody>
-<tr><td>Search</td><td>pacwin search &lt;query&gt;</td><td>pacwin -Ss &lt;query&gt;</td></tr>
-<tr><td>Install</td><td>pacwin install &lt;id&gt;</td><td>pacwin -S &lt;id&gt;</td></tr>
-<tr><td>Uninstall</td><td>pacwin uninstall &lt;id&gt;</td><td>pacwin -R &lt;id&gt;</td></tr>
-<tr><td>Update all</td><td>pacwin update</td><td>pacwin -Syu</td></tr>
-<tr><td>List installed</td><td>pacwin list</td><td>pacwin -Q</td></tr>
-<tr><td>Check outdated</td><td>pacwin outdated</td><td>pacwin -Qu</td></tr>
-<tr><td>Hold / Pin</td><td>pacwin hold &lt;id&gt;</td><td>pacwin pin &lt;id&gt;</td></tr>
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<!-- Column 2: Key Features -->
-<div class="space-y-8">
-<div>
-<h3 class="font-bold text-xl text-secondary mb-6 flex items-center gap-3 border-b border-outline-variant pb-2">
-                        [ 03_ARCHITECTURE_&amp;_SECURITY ]
-                    </h3>
-<p class="text-on-surface-variant mb-8 text-sm">
-                        No-nonsense engineering. Zero bloat. Windows-first architecture.
-                    </p>
-</div>
-<div class="grid grid-cols-1 gap-4">
-<div class="bg-surface p-6 border border-outline-variant hover:border-primary transition-colors accent-border-green">
-<div class="flex items-start gap-4">
-<span class="material-symbols-outlined text-secondary" data-icon="integration_instructions">integration_instructions</span>
-<div>
-<h4 class="font-bold text-on-surface mb-1 text-sm uppercase">CONCURRENCY ENGINE</h4>
-<p class="text-on-surface-variant text-xs leading-relaxed">`RunspacePool` (threads) on PS 5.1 to avoid `Start-Job` overhead. `ForEach-Object -Parallel` on PS 7+. Same process, shared memory.</p>
-</div>
-</div>
-</div>
-<div class="bg-surface p-6 border border-outline-variant hover:border-primary transition-colors accent-border-green">
-<div class="flex items-start gap-4">
-<span class="material-symbols-outlined text-secondary" data-icon="security">security</span>
-<div>
-<h4 class="font-bold text-on-surface mb-1 text-sm uppercase">SECURITY MODEL</h4>
-<p class="text-on-surface-variant text-xs leading-relaxed">Strict regex input sanitization. `Set-StrictMode -Version 2.0`. No `Invoke-Expression`. Ever.</p>
-</div>
-</div>
-</div>
-<div class="bg-surface p-6 border border-outline-variant hover:border-primary transition-colors accent-border-green">
-<div class="flex items-start gap-4">
-<span class="material-symbols-outlined text-secondary" data-icon="inventory_2">inventory_2</span>
-<div>
-<h4 class="font-bold text-on-surface mb-1 text-sm uppercase">ZERO_DEP_INIT</h4>
-<p class="text-on-surface-variant text-xs leading-relaxed">Stand-alone script module (`.psm1`). No compiled binaries, no DLL hell.</p>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
-<!-- Footer -->
-<footer class="bg-black border-t border-outline-variant">
-<div class="w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center gap-8 max-w-7xl mx-auto">
-<div class="flex flex-col gap-2">
-<div class="text-lg font-bold text-primary">PACWIN_V0.2.6</div>
-<div class="text-[10px] text-on-surface-variant uppercase tracking-widest">© 2024 TERMINAL_SYSTEMS_LLC</div>
-</div>
-<div class="flex gap-8">
-<a class="text-xs text-on-surface-variant hover:text-primary transition-colors font-bold" href="#">DOCS</a>
-<a class="text-xs text-on-surface-variant hover:text-primary transition-colors font-bold" href="#">REPO</a>
-<a class="text-xs text-on-surface-variant hover:text-primary transition-colors font-bold" href="#">LICENSE</a>
-</div>
-<div class="flex items-center gap-4 bg-surface border border-outline-variant px-4 py-2">
-<span class="text-[10px] font-bold text-secondary uppercase tracking-tighter">Status: Online</span>
-<div class="w-2 h-2 bg-secondary shadow-[0_0_5px_#a3d489]"></div>
-</div>
-</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">C:\&gt; pacwin_</div>
+      <div class="footer-links">
+        <a href="https://github.com/julesklord/pacwin" target="_blank">GitHub</a>
+        <a href="https://github.com/julesklord/pacwin/wiki" target="_blank">Docs</a>
+        <a href="https://github.com/julesklord/pacwin/blob/main/LICENSE" target="_blank">License</a>
+        <a href="https://github.com/julesklord/pacwin/releases" target="_blank">Releases</a>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        v0.2.6 — ONLINE
+      </div>
+    </div>
+  </div>
 </footer>
-</main></body></html>
+</body>
+</html>
