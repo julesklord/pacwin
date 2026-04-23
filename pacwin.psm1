@@ -396,7 +396,7 @@ function _pw_search_all {
         try {
             if ($t.AsyncResult.IsCompleted) {
                 $raw = $t.PowerShell.EndInvoke($t.AsyncResult)
-                $lines = @($raw | ForEach-Object { "$_" })
+                $lines = [System.Collections.Generic.List[string]]::new($raw.Count); foreach ($r in $raw) { $lines.Add([string]$r) }
                 $parsed = @()
                 switch ($t.Key) {
                     "winget" { $parsed = _pw_parse_winget_lines $lines }
@@ -620,9 +620,9 @@ function pacwin {
 
         "^(status)$" {
             _pw_color "  Binary Paths:" Cyan
-            $managers.Keys | ForEach-Object {
-                _pw_color "  * $_ " Gray -NoNewline
-                _pw_color "-> $($managers[$_])" DarkGray
+            foreach ($key in $managers.Keys) {
+                _pw_color "  * $key " Gray -NoNewline
+                _pw_color "-> $($managers[$key])" DarkGray
             }
         }
 
@@ -1080,7 +1080,7 @@ function _pw_do_sync {
 
     if ($managers["winget"]) {
         $raw = winget list --accept-source-agreements 2>$null
-        $lines = @($raw | ForEach-Object { "$_" })
+        $lines = [System.Collections.Generic.List[string]]::new($raw.Count); foreach ($r in $raw) { $lines.Add([string]$r) }
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $installed.Add($p) }
     }
@@ -1251,7 +1251,7 @@ function _pw_do_outdated {
     if ($managers["winget"]) {
         if (-not $Silent) { _pw_color "  -- winget -----------------------------" Cyan }
         $out = winget upgrade --accept-source-agreements 2>$null
-        $lines = @($out | ForEach-Object { "$_" })
+        $lines = [System.Collections.Generic.List[string]]::new($out.Count); foreach ($o in $out) { $lines.Add([string]$o) }
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $allResults.Add($p) }
     }
@@ -1436,21 +1436,21 @@ Register-ArgumentCompleter -CommandName pacwin -ParameterName Command -ScriptBlo
         'hold','unhold','check','sync','dupes','dedup','self-update','version',
         '-S','-Ss','-Syu','-R','-Q','-Qu','-Si','-V','-h','--help','--version'
     )
-    $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+    foreach ($cmd in $cmds.Where({ $_ -like "$wordToComplete*" })) {
         [System.Management.Automation.CompletionResult]::new(
-            $_,                                      # completionText
-            $_,                                      # listItemText
+            $cmd,                                      # completionText
+            $cmd,                                      # listItemText
             [System.Management.Automation.CompletionResultType]::ParameterValue,
-            $_                                       # toolTip
+            $cmd                                       # toolTip
         )
     }
 }
 
 Register-ArgumentCompleter -CommandName pacwin -ParameterName Manager -ScriptBlock {
     param($commandName, $parameterName, $wordToComplete)
-    @('winget','choco','scoop') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
-        [System.Management.Automation.CompletionResult]::new($_, $_, 
-            [System.Management.Automation.CompletionResultType]::ParameterValue, $_)
+    foreach ($mgr in @('winget','choco','scoop').Where({ $_ -like "$wordToComplete*" })) {
+        [System.Management.Automation.CompletionResult]::new($mgr, $mgr,
+            [System.Management.Automation.CompletionResultType]::ParameterValue, $mgr)
     }
 }
 
