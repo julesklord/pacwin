@@ -27,3 +27,5 @@ CLAUDE.md
 *_audit.md
 *.txt
 *.log
+.claude/
+.scratch/
