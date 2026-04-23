@@ -441,22 +441,54 @@ function pacwin {
         [int]$Timeout = 35,
 
         [Parameter()]
-        [switch]$NoHeader
+        [switch]$NoHeader,
+
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$_pw_unbound
     )
     
-    if ([string]::IsNullOrWhiteSpace($Command)) { $Command = "help" }
+    # -- Manual Argument Parsing for Pacman Shorthand flags --
+    # Re-align arguments if shorthand flags like -S, -Ss, -R are used.
+    # We collect everything (positional + unbound) to determine the real command.
+    $allArgs = New-Object System.Collections.Generic.List[string]
+    if ($Command) { [void]$allArgs.Add($Command) }
+    if ($Query) { [void]$allArgs.Add($Query) }
+    if ($_pw_unbound) { foreach ($a in $_pw_unbound) { [void]$allArgs.Add($a) } }
 
+    if ($allArgs.Count -gt 0) {
+        $flagIdx = -1
+        # Regex to identify shorthand flags (Pacman-style)
+        $flagRegex = "^-(S|Ss|R|Q|Qu|Syu|Si|V|h|v)$|^--(help|version)$"
+        
+        for ($i = 0; $i -lt $allArgs.Count; $i++) {
+            if ($allArgs[$i] -match $flagRegex) {
+                $flagIdx = $i
+                break
+            }
+        }
+
+        if ($flagIdx -ne -1) {
+            $foundFlag = $allArgs[$flagIdx]
+            $allArgs.RemoveAt($flagIdx)
+            $Command = $foundFlag
+            # The next available argument is treated as the Query (package name)
+            $Query = if ($allArgs.Count -gt 0) { $allArgs[0] } else { $null }
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Command)) { $Command = "help" }
     $managers = _pw_detect_managers
+    $targetManagers = _pw_filter_manager $managers $Manager
+
     if (-not $NoHeader) { _pw_header $managers }
     if (-not (_pw_assert_managers $managers)) { return }
 
-    $targetManagers = _pw_filter_manager $managers $Manager
     if (-not $targetManagers) { return }
 
     # Global Admin check for choco/winget operations
     if (-not (_pw_is_admin)) {
         if ($Manager -eq "choco" -or ($null -eq $Manager -and $managers["choco"])) {
-            if ($Command -match "^(install|uninstall|update|upgrade|import|pin|unpin|hold|unhold)") {
+            if ($Command -match "^(install|uninstall|update|upgrade|import|pin|unpin|hold|unhold|-S|-R|-Syu)") {
                 _pw_color "  [!] Warning: You are running as a standard user." Yellow
                 _pw_color "      Chocolatey (choco) usually requires Administrator privileges to perform this action." Yellow
                 _pw_color ""
@@ -592,6 +624,12 @@ function pacwin {
                 _pw_color "  * $_ " Gray -NoNewline
                 _pw_color "-> $($managers[$_])" DarkGray
             }
+        }
+
+        "^(version|-V|--version)$" {
+            _pw_color "  pacwin v0.2.6" Cyan
+            _pw_color "  PowerShell $($PSVersionTable.PSVersion)" Gray
+            return
         }
 
         "^(self-update)$" {
@@ -1160,22 +1198,47 @@ function _pw_do_update_all {
         [Parameter(Mandatory=$true)]
         $managers
     )
+
+    _pw_color "  :: Synchronizing package databases..." Cyan
+    if ($managers["scoop"]) { 
+        _pw_color "  Updating scoop database..." Gray
+        & $managers["scoop"] update | Out-Null 
+    }
+
+    _pw_color "  :: Searching for outdated packages..." Cyan
+    $outdated = _pw_do_outdated $managers -Silent
+    if ($outdated.Count -eq 0) {
+        _pw_color "  [OK] All packages are up to date." Green
+        return
+    }
+
+    _pw_color "  Packages to upgrade ($($outdated.Count) total):" Yellow
+    _pw_render_results $outdated
+    
+    _pw_color ""
+    $confirmation = Read-Host "  :: Proceed with installation? [Y/n]"
+    if ($confirmation -ne "" -and $confirmation -notmatch "^(y|Y)$") {
+        _pw_color "  Aborted." Yellow
+        return
+    }
+
+    _pw_color "  :: Starting full system upgrade..." Cyan
     if ($managers["winget"]) {
         _pw_color "  -- winget -----------------------------" Cyan
         if ($PSCmdlet.ShouldProcess("winget upgrade --all")) {
-            winget upgrade --all --accept-package-agreements --accept-source-agreements
+            & $managers["winget"] upgrade --all --accept-package-agreements --accept-source-agreements
         }
     }
     if ($managers["choco"]) {
         _pw_color "  -- chocolatey -------------------------" Yellow
         if ($PSCmdlet.ShouldProcess("choco upgrade all")) {
-            choco upgrade all -y
+            & $managers["choco"] upgrade all -y
         }
     }
     if ($managers["scoop"]) {
         _pw_color "  -- scoop ------------------------------" Green
         if ($PSCmdlet.ShouldProcess("scoop update *")) {
-            scoop update *
+            & $managers["scoop"] update *
         }
     }
 }
@@ -1370,7 +1433,8 @@ Register-ArgumentCompleter -CommandName pacwin -ParameterName Command -ScriptBlo
     $cmds = @(
         'search','install','uninstall','update','outdated','list',
         'info','pin','unpin','export','import','doctor','status','help',
-        'hold','unhold','check','sync','dupes','dedup','self-update'
+        'hold','unhold','check','sync','dupes','dedup','self-update','version',
+        '-S','-Ss','-Syu','-R','-Q','-Qu','-Si','-V','-h','--help','--version'
     )
     $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new(

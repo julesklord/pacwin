@@ -3,6 +3,9 @@
 param($ModulePath)
 
 BeforeAll {
+    # Ensure no previous version of the module is lingering
+    Remove-Module pacwin -ErrorAction SilentlyContinue
+
     # If ModulePath was passed via -Data, use it. Otherwise, search.
     if ($null -ne $ModulePath -and (Test-Path $ModulePath)) {
         $ModuleFile = Get-Item $ModulePath
@@ -33,8 +36,40 @@ Describe "pacwin core logic" {
         # Global mocks to prevent side effects
         Mock -ModuleName pacwin _pw_is_admin { return $true }
         Mock -ModuleName pacwin _pw_detect_managers { return @{ winget = "winget.exe"; choco = "choco.exe" } }
+        Mock -ModuleName pacwin _pw_assert_managers { return $true }
         Mock -ModuleName pacwin _pw_color { param($text, $color, $NoNewline) }
         Mock -ModuleName pacwin _pw_header { param($title) }
+    }
+
+    It "Correctly maps shorthand -Ss to search flow" {
+        Mock -ModuleName pacwin _pw_search_all { param($mgrs, $q, $l, $t) return @() }
+        Mock -ModuleName pacwin _pw_render_results { param($res, $q) }
+        
+        { pacwin -Ss "wget" -Manager winget } | Should -Not -Throw
+        Assert-MockCalled _pw_search_all -ModuleName pacwin
+    }
+
+    It "Correctly maps shorthand -S to install flow" {
+        Mock -ModuleName pacwin _pw_search_all { return @([PSCustomObject]@{ ID="wget"; Manager="winget"; Name="wget" }) }
+        Mock -ModuleName pacwin _pw_pick_source { param($candidates) if ($candidates -is [array]) { return $candidates[0] } return $candidates }
+        Mock -ModuleName pacwin _pw_do_install { param($pkg) return $true }
+        
+        { pacwin -S "wget" -Manager winget } | Should -Not -Throw
+        Assert-MockCalled _pw_do_install -ModuleName pacwin
+    }
+
+    It "Correctly maps shorthand -R to uninstall flow" {
+        Mock -ModuleName pacwin _pw_do_uninstall { param($name, $mgr) }
+        
+        { pacwin -R "wget" -Manager winget } | Should -Not -Throw
+        Assert-MockCalled _pw_do_uninstall -ModuleName pacwin -ParameterFilter { $name -eq "wget" -and $mgr -eq "winget" }
+    }
+
+    It "Correctly maps shorthand -Syu to update flow" {
+        Mock -ModuleName pacwin _pw_do_update_all { param($mgrs) }
+        
+        { pacwin -Syu } | Should -Not -Throw
+        Assert-MockCalled _pw_do_update_all -ModuleName pacwin -Times 1 -Exactly
     }
 
     It "Can run pacwin doctor without real environment checks" {

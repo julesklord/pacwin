@@ -13,7 +13,6 @@ obj/
 docs/artifacts/
 .agents/
 .gemini/
-.claude/
 .vibecheck/
 .snapshots/
 .vscode/
@@ -21,7 +20,6 @@ pacwin.code-workspace
 .cursor/
 /workflows/
 CLAUDE.md
-.claude/
 *.cast
 .bin/
 *.ps1.txt
