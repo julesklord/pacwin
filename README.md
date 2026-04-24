@@ -1,9 +1,7 @@
 # pacwin
 
 <!-- markdownlint-disable MD033 -->
-<p align="center">
-  <img src="docs/logo_pacwin.png" width="800" alt="pacwin logo">
-</p>
+
 <!-- markdownlint-enable MD033 -->
 
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/pacwin.svg?color=blue&label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/pacwin)
