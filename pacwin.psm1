@@ -384,7 +384,7 @@ function _pw_search_all {
         try {
             if ($t.AsyncResult.IsCompleted) {
                 $raw = $t.PowerShell.EndInvoke($t.AsyncResult)
-                $lines = @($raw | ForEach-Object { "$_" })
+                $lines = [System.Collections.Generic.List[string]]::new(); foreach ($r in $raw) { $lines.Add("$r") }
                 $parsed = @()
                 switch ($t.Key) {
                     "winget" { $parsed = _pw_parse_winget_lines $lines }
@@ -576,9 +576,9 @@ function pacwin {
 
         "^(status)$" {
             _pw_color "  Binary Paths:" Cyan
-            $managers.Keys | ForEach-Object {
-                _pw_color "  * $_ " Gray -NoNewline
-                _pw_color "-> $($managers[$_])" DarkGray
+            foreach ($k in $managers.Keys) {
+                _pw_color "  * $k " Gray -NoNewline
+                _pw_color "-> $($managers[$k])" DarkGray
             }
         }
 
@@ -1030,7 +1030,7 @@ function _pw_do_sync {
 
     if ($managers["winget"]) {
         $raw = winget list --accept-source-agreements 2>$null
-        $lines = @($raw | ForEach-Object { "$_" })
+        $lines = [System.Collections.Generic.List[string]]::new(); foreach ($r in $raw) { $lines.Add("$r") }
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $installed.Add($p) }
     }
@@ -1176,7 +1176,7 @@ function _pw_do_outdated {
     if ($managers["winget"]) {
         if (-not $Silent) { _pw_color "  -- winget -----------------------------" Cyan }
         $out = winget upgrade --accept-source-agreements 2>$null
-        $lines = @($out | ForEach-Object { "$_" })
+        $lines = [System.Collections.Generic.List[string]]::new(); foreach ($o in $out) { $lines.Add("$o") }
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $allResults.Add($p) }
     }
@@ -1330,13 +1330,15 @@ Register-ArgumentCompleter -CommandName pacwin -ParameterName Command -ScriptBlo
         'info','pin','unpin','export','import','doctor','status','help',
         'hold','unhold','check','sync','dupes','dedup','self-update'
     )
-    $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
-        [System.Management.Automation.CompletionResult]::new(
-            $_,                                      # completionText
-            $_,                                      # listItemText
-            [System.Management.Automation.CompletionResultType]::ParameterValue,
-            $_                                       # toolTip
-        )
+    foreach ($cmd in $cmds) {
+        if ($cmd -like "$wordToComplete*") {
+            [System.Management.Automation.CompletionResult]::new(
+                $cmd,                                    # completionText
+                $cmd,                                    # listItemText
+                [System.Management.Automation.CompletionResultType]::ParameterValue,
+                $cmd                                     # toolTip
+            )
+        }
     }
 }
 
