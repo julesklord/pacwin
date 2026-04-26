@@ -409,7 +409,7 @@ function _pw_do_sync {
 
     if ($managers["winget"]) {
         $raw = winget list 2>$null
-        $lines = @($raw | ForEach-Object { "$_" })
+        $lines = foreach ($r in $raw) { "$r" }
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $installed.Add($p) }
     }

@@ -245,7 +245,7 @@ function _pw_search_all {
         $finished = $job | Wait-Job -Timeout 25
         if ($finished) {
             $raw = Receive-Job $job -ErrorAction SilentlyContinue
-            $lines = @($raw | ForEach-Object { "$_" })
+            $lines = foreach ($r in $raw) { "$r" }
             switch ($key) {
                 "winget" { $parsed = _pw_parse_winget_lines $lines }
                 "choco" { $parsed = _pw_parse_choco_lines  $lines }
