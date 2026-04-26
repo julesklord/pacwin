@@ -154,6 +154,96 @@ pacwin install docker -WhatIf
 ---
 
 ## Architecture
+```mermaid
+flowchart TD
+
+subgraph group_core["Core module"]
+  node_pacwin_psm1["pacwin.psm1<br/>script module<br/>[pacwin.psm1]"]
+  node_pacwin_psd1["pacwin.psd1<br/>manifest<br/>[pacwin.psd1]"]
+  node_command_dispatch["Command dispatch<br/>cli router"]
+  node_backend_fanout["Fan-out<br/>concurrency"]
+  node_safety_guards["Safety guards<br/>input validation"]
+  node_output_shape["Output shape<br/>presentation"]
+  node_normalized_model["Common model<br/>object model"]
+end
+
+subgraph group_backends["Package backends"]
+  node_winget_parser["Winget parser"]
+  node_choco_parser["Choco parser"]
+  node_scoop_parser["Scoop parser"]
+  node_winget_cli["winget<br/>external CLI"]
+  node_choco_cli["choco<br/>external CLI"]
+  node_scoop_cli["scoop<br/>external CLI"]
+end
+
+subgraph group_delivery["Delivery"]
+  node_install_ps1["install.ps1<br/>bootstrap script<br/>[install.ps1]"]
+  node_get_pacwin_ps1["get-pacwin.ps1<br/>fetch script<br/>[get-pacwin.ps1]"]
+  node_github_workflows["GitHub Actions<br/>ci/release workflows"]
+end
+
+subgraph group_quality["Testing"]
+  node_pester_bundle["Pester<br/>bundled test framework<br/>[Pester.psm1]"]
+  node_module_tests["Module tests<br/>pester tests<br/>[pacwin.Tests.ps1]"]
+  node_parser_tests["Parser tests<br/>pester tests<br/>[parsers.Tests.ps1]"]
+end
+
+subgraph group_docs["Docs"]
+  node_readme_docs["README<br/>docs<br/>[README.md]"]
+  node_wiki_docs["Wiki<br/>docs<br/>[Home.md]"]
+end
+
+node_pacwin_psd1 -->|"loads"| node_pacwin_psm1
+node_pacwin_psm1 -->|"routes"| node_command_dispatch
+node_pacwin_psm1 -->|"executes"| node_backend_fanout
+node_pacwin_psm1 -->|"validates"| node_safety_guards
+node_pacwin_psm1 -->|"formats"| node_output_shape
+node_pacwin_psm1 -->|"emits"| node_normalized_model
+node_backend_fanout -->|"feeds"| node_winget_parser
+node_backend_fanout -->|"feeds"| node_choco_parser
+node_backend_fanout -->|"feeds"| node_scoop_parser
+node_winget_parser -->|"reads"| node_winget_cli
+node_choco_parser -->|"reads"| node_choco_cli
+node_scoop_parser -->|"reads"| node_scoop_cli
+node_winget_parser -->|"normalizes"| node_normalized_model
+node_choco_parser -->|"normalizes"| node_normalized_model
+node_scoop_parser -->|"normalizes"| node_normalized_model
+node_install_ps1 -->|"installs"| node_pacwin_psm1
+node_get_pacwin_ps1 -->|"fetches"| node_pacwin_psm1
+node_github_workflows -->|"runs"| node_module_tests
+node_github_workflows -->|"uses"| node_pester_bundle
+node_module_tests -->|"loads"| node_pester_bundle
+node_parser_tests -->|"loads"| node_pester_bundle
+node_module_tests -->|"covers"| node_pacwin_psm1
+node_parser_tests -->|"covers"| node_winget_parser
+node_parser_tests -->|"covers"| node_choco_parser
+node_parser_tests -->|"covers"| node_scoop_parser
+node_readme_docs -->|"describes"| node_pacwin_psm1
+node_wiki_docs -->|"extends"| node_readme_docs
+
+click node_pacwin_psm1 "https://github.com/julesklord/pacwin/blob/main/pacwin.psm1"
+click node_pacwin_psd1 "https://github.com/julesklord/pacwin/blob/main/pacwin.psd1"
+click node_install_ps1 "https://github.com/julesklord/pacwin/blob/main/install.ps1"
+click node_get_pacwin_ps1 "https://github.com/julesklord/pacwin/blob/main/get-pacwin.ps1"
+click node_readme_docs "https://github.com/julesklord/pacwin/blob/main/README.md"
+click node_wiki_docs "https://github.com/julesklord/pacwin/blob/main/wiki/Home.md"
+click node_pester_bundle "https://github.com/julesklord/pacwin/blob/main/tests/modules/Pester/Pester.psm1"
+click node_module_tests "https://github.com/julesklord/pacwin/blob/main/tests/pacwin.Tests.ps1"
+click node_parser_tests "https://github.com/julesklord/pacwin/blob/main/tests/parsers.Tests.ps1"
+
+classDef toneNeutral fill:#f8fafc,stroke:#334155,stroke-width:1.5px,color:#0f172a
+classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
+classDef toneAmber fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+classDef toneMint fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d
+classDef toneRose fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337
+classDef toneIndigo fill:#e0e7ff,stroke:#4f46e5,stroke-width:1.5px,color:#312e81
+classDef toneTeal fill:#ccfbf1,stroke:#0f766e,stroke-width:1.5px,color:#134e4a
+class node_pacwin_psm1,node_pacwin_psd1,node_command_dispatch,node_backend_fanout,node_safety_guards,node_output_shape,node_normalized_model toneBlue
+class node_winget_parser,node_choco_parser,node_scoop_parser,node_winget_cli,node_choco_cli,node_scoop_cli toneAmber
+class node_install_ps1,node_get_pacwin_ps1,node_github_workflows toneMint
+class node_pester_bundle,node_module_tests,node_parser_tests toneRose
+class node_readme_docs,node_wiki_docs toneIndigo
+```
 
 `pacwin` is a single **Script Module (`.psm1`)** file. No compiled binaries, no DLL hell, no build step. Load it, use it, read it if you want—it's ~1400 lines of annotated PowerShell.
 
