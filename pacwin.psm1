@@ -212,38 +212,22 @@ function _pw_parse_winget_lines {
     foreach ($line in $lines) {
         if ($line -eq $separatorLine) { $dataStart = $true; continue }
         if (-not $dataStart -or $line -match "^\s*$|^-|^[^\x00-\x7F]|%|[\d.]+\s+[KMG]B\s*/") { continue }
-        
-        $len = $line.Length
-        if ($len -le $nameOff) { continue }
 
-        try {
-            $name = $line.Substring($nameOff, [Math]::Min($nameLen, $len - $nameOff)).Trim()
-            
-            $id = ""
-            if ($idOff -lt $len) {
-                $id = $line.Substring($idOff, [Math]::Min($idLen, $len - $idOff)).Trim()
-            }
+        $name = _pw_extract_column $line $nameOff $nameLen $null
+        $id   = _pw_extract_column $line $idOff   $idLen   $null
 
-            $ver = "?"
-            if ($versionOff -gt 0 -and $versionOff -lt $len) {
-                $vLen = if ($sourceOff -gt $versionOff) { $sourceOff - $versionOff } else { $versionLen }
-                $ver = $line.Substring($versionOff, [Math]::Min($vLen, $len - $versionOff)).Trim()
-            }
+        if (-not $name -or -not $id) { continue }
 
-            if ($name -and $id) {
-                $results.Add([PSCustomObject]@{
-                        Name    = $name
-                        ID      = $id
-                        Version = $(if ($ver) { $ver } else { "?" })
-                        Source  = "winget"
-                        Manager = "winget"
-                    })
-            }
-        }
-        catch { 
-            # Log parsing error but keep going
-            Write-Debug "Failed to parse winget line: $line"
-        }
+        $vLen = if ($sourceOff -gt $versionOff -and $versionOff -gt 0) { $sourceOff - $versionOff } else { $versionLen }
+        $ver  = _pw_extract_column $line $versionOff $vLen "?"
+
+        $results.Add([PSCustomObject]@{
+                Name    = $name
+                ID      = $id
+                Version = $ver
+                Source  = "winget"
+                Manager = "winget"
+            })
     }
     return ,$results
 }
@@ -688,6 +672,16 @@ function _pw_truncate {
     if (-not $str) { return "".PadRight($max) }
     if ($str.Length -le $max) { return $str.PadRight($max) }
     return ($str.Substring(0, $max - 1) + ".")
+}
+
+function _pw_extract_column {
+    param([string]$line, [int]$off, [int]$len, [string]$fallback = "?")
+    if ($off -lt 0 -or $off -ge $line.Length) { return $fallback }
+    $actualLen = [Math]::Min($len, $line.Length - $off)
+    if ($actualLen -le 0) { return $fallback }
+    $val = $line.Substring($off, $actualLen).Trim()
+    if ($val) { return $val }
+    return $fallback
 }
 
 function _pw_render_results {

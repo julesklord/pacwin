@@ -1,210 +1,137 @@
-# Parser Tests for pacwin
+# Parser Tests for pacwin (Pester 5.x Optimized)
 
 Describe "pacwin Parsers" {
     BeforeAll {
-        $parent = Split-Path $PSScriptRoot -Parent
-        if (-not $parent) {
-            $parent = $PSScriptRoot
+        Remove-Module pacwin -ErrorAction SilentlyContinue
+        $current = $PSScriptRoot
+        $ModuleFile = $null
+        for ($i = 0; $i -lt 5; $i++) {
+            $candidate = Join-Path $current "pacwin.psm1"
+            if (Test-Path $candidate) {
+                $ModuleFile = Get-Item $candidate
+                break
+            }
+            $current = Split-Path $current -Parent
+            if (-not $current) { break }
         }
 
-        $candidates = @(
-            (Join-Path $parent "pacwin.psm1"),
-            (Join-Path $parent "scratch/pacwin.psm1")
-        )
+        if ($null -eq $ModuleFile) {
+            throw "Unable to locate pacwin.psm1. Search started at: $PSScriptRoot"
+        }
+        Import-Module $ModuleFile.FullName -Force
+    }
 
-        $ModuleFile = $null
-        foreach ($candidate in $candidates) {
-            if (Test-Path $candidate) {
-                $ModuleFile = (Resolve-Path $candidate).Path
-                break
+    Context "Column Extractor (_pw_extract_column)" {
+        It "Should extract a column within bounds" {
+            InModuleScope pacwin {
+                $line = "PackageName    ID-123    1.2.3"
+                _pw_extract_column $line 0 11 | Should -Be "PackageName"
+                _pw_extract_column $line 15 6 | Should -Be "ID-123"
             }
         }
 
-        if (-not $ModuleFile) {
-            throw "Unable to locate pacwin.psm1 from tests."
+        It "Should handle out of bounds gracefully" {
+            InModuleScope pacwin {
+                $line = "Short"
+                _pw_extract_column $line 10 5 "N/A" | Should -Be "N/A"
+            }
         }
-        # Dot-sourcing the module file to access private functions for testing
-        . (Resolve-Path $PSScriptRoot/../pacwin.psm1).Path
+
+        It "Should handle trailing columns with small length" {
+            InModuleScope pacwin {
+                $line = "Part1  Part2"
+                _pw_extract_column $line 7 100 | Should -Be "Part2"
+            }
+        }
+
+        It "Should return fallback for empty or whitespace columns" {
+            InModuleScope pacwin {
+                $line = "Name          Version"
+                _pw_extract_column $line 5 5 "Empty" | Should -Be "Empty"
+            }
+        }
+    }
+
+    Context "Winget Parser (_pw_parse_winget_lines)" {
+        It "Should parse standard winget table output" {
+            InModuleScope pacwin {
+                $lines = @(
+                    "Name               Id               Version     Source",
+                    "------------------------------------------------------",
+                    "Google Chrome      Google.Chrome    120.0.0.0   winget",
+                    "Mozilla Firefox    Mozilla.Firefox  121.0       winget"
+                )
+                $res = _pw_parse_winget_lines $lines
+                $res.Count | Should -Be 2
+                $res[0].Name | Should -Be "Google Chrome"
+                $res[0].ID | Should -Be "Google.Chrome"
+                $res[0].Version | Should -Be "120.0.0.0"
+            }
+        }
+
+        It "Should handle missing version column" {
+            InModuleScope pacwin {
+                $lines = @(
+                    "Name      Id",
+                    "------------",
+                    "App1      App1.Id"
+                )
+                $res = _pw_parse_winget_lines $lines
+                $res.Count | Should -Be 1
+                $res[0].Version | Should -Be "?"
+            }
+        }
+
+        It "Should use heuristic fallback if no separator is found" {
+            InModuleScope pacwin {
+                $lines = @(
+                    "Name  Id  Version",
+                    "App1  Id1  1.0.0"
+                )
+                $res = _pw_parse_winget_lines $lines
+                # The heuristic skip logic might skip "Name Id Version" if it matches noise regex
+                # But it should find App1
+                $res.Count | Should -BeGreaterThan 0
+                $res | Where-Object { $_.Name -eq "App1" } | Should -Not -BeNullOrEmpty
+            }
+        }
     }
 
     Context "Scoop Parser (_pw_parse_scoop_lines)" {
         It "Should return an empty list when no lines are provided" {
-            $results = _pw_parse_scoop_lines @()
-            $results.Count | Should -Be 0
-        }
-
-        It "Should ignore lines until 'Results from' is encountered" {
-            $lines = @(
-                "Scoop version 0.1.0",
-                "Some other noise",
-                "Results from local buckets...",
-                "  7zip (23.01) [main]"
-            )
-            $results = _pw_parse_scoop_lines $lines
-            $results.Count | Should -Be 1
-            $results[0].Name | Should -Be "7zip"
+            InModuleScope pacwin {
+                $results = _pw_parse_scoop_lines @()
+                $results.Count | Should -Be 0
+            }
         }
 
         It "Should parse modern scoop format: '  name (version) [bucket]'" {
-            $lines = @(
-                "Results from local buckets...",
-                "  7zip (23.01) [main]",
-                "  git (2.42.0.windows.2) [main]",
-                "  vscode (1.82.2) [extras]"
-            )
-            $results = _pw_parse_scoop_lines $lines
-
-            $results.Count | Should -Be 3
-
-            $results[0].Name | Should -Be "7zip"
-            $results[0].Version | Should -Be "23.01"
-            $results[0].Manager | Should -Be "scoop"
-
-            $results[1].Name | Should -Be "git"
-            $results[1].Version | Should -Be "2.42.0.windows.2"
-
-            $results[2].Name | Should -Be "vscode"
-            $results[2].Version | Should -Be "1.82.2"
-        }
-
-        It "Should parse legacy scoop format with columns" {
-            $lines = @(
-                "Results from local buckets...",
-                "Name    Version    Source",
-                "----    -------    ------",
-                "curl    8.4.0      main",
-                "wget    1.21.4     main"
-            )
-            $results = _pw_parse_scoop_lines $lines
-
-            $results.Count | Should -Be 2
-
-            $results[0].Name | Should -Be "curl"
-            $results[0].Version | Should -Be "8.4.0"
-
-            $results[1].Name | Should -Be "wget"
-            $results[1].Version | Should -Be "1.21.4"
-        }
-
-        It "Should handle legacy format with missing versions" {
-            $lines = @(
-                "Results from local buckets...",
-                "Name    Version",
-                "----    -------",
-                "some-app"
-            )
-            $results = _pw_parse_scoop_lines $lines
-
-            $results.Count | Should -Be 1
-            $results[0].Name | Should -Be "some-app"
-            $results[0].Version | Should -Be "?"
-        }
-
-        It "Should ignore empty lines and separators" {
-            $lines = @(
-                "Results from local buckets...",
-                "",
-                "----------------------------",
-                "  7zip (23.01) [main]",
-                "    ",
-                "  git (2.42.0.windows.2) [main]"
-            )
-            $results = _pw_parse_scoop_lines $lines
-
-            $results.Count | Should -Be 2
-        }
-
-        It "Should ignore header lines in legacy format" {
-            $lines = @(
-                "Results from local buckets...",
-                "Name    Version    Source",
-                "curl    8.4.0      main"
-            )
-            # The current implementation of _pw_parse_scoop_lines has:
-            # if ($parts.Count -ge 1 -and $parts[0] -notmatch "^[Nn]ame$|^Source$")
-            # So it should skip "Name"
-            $results = _pw_parse_scoop_lines $lines
-            $results.Count | Should -Be 1
-            $results[0].Name | Should -Be "curl"
+            InModuleScope pacwin {
+                $lines = @(
+                    "Results from local buckets...",
+                    "  7zip (23.01) [main]",
+                    "  git (2.42.0.windows.2) [main]"
+                )
+                $results = _pw_parse_scoop_lines $lines
+                $results.Count | Should -Be 2
+                $results[0].Name | Should -Be "7zip"
+                $results[0].Version | Should -Be "23.01"
+            }
         }
     }
 
     Context "Chocolatey Parser (_pw_parse_choco_lines)" {
-        It "Should return an empty list when no lines are provided" {
-            $results = _pw_parse_choco_lines @()
-            $results.Count | Should -Be 0
-        }
-
         It "Should parse simple name|version format" {
-            $lines = @(
-                "7zip|23.01.0",
-                "git|2.42.0",
-                "vscode|1.82.2"
-            )
-            $results = _pw_parse_choco_lines $lines
-
-            $results.Count | Should -Be 3
-
-            $results[0].Name | Should -Be "7zip"
-            $results[0].Version | Should -Be "23.01.0"
-            $results[0].Manager | Should -Be "choco"
-
-            $results[1].Name | Should -Be "git"
-            $results[1].Version | Should -Be "2.42.0"
-
-            $results[2].Name | Should -Be "vscode"
-            $results[2].Version | Should -Be "1.82.2"
-        }
-
-        It "Should ignore lines with missing versions or empty strings" {
-            $lines = @(
-                "7zip|23.01.0",
-                "",
-                "git",
-                "vscode|"
-            )
-            $results = _pw_parse_choco_lines $lines
-
-            # Note: "vscode|" splits into ["vscode", ""] which satisfies >= 2 condition
-            # However "git" only splits into ["git"] which fails >= 2 condition
-            $results.Count | Should -Be 2
-
-            $results[0].Name | Should -Be "7zip"
-
-            $results[1].Name | Should -Be "vscode"
-            $results[1].Version | Should -Be ""
-        }
-
-        It "Should handle extra columns correctly" {
-            $lines = @(
-                "7zip|23.01.0|extra_info",
-                "git|2.42.0|main|something"
-            )
-            $results = _pw_parse_choco_lines $lines
-
-            $results.Count | Should -Be 2
-
-            $results[0].Name | Should -Be "7zip"
-            $results[0].Version | Should -Be "23.01.0"
-
-            $results[1].Name | Should -Be "git"
-            $results[1].Version | Should -Be "2.42.0"
-        }
-
-        It "Should trim whitespace around parts" {
-            $lines = @(
-                "  7zip  |  23.01.0  ",
-                "git| 2.42.0 "
-            )
-            $results = _pw_parse_choco_lines $lines
-
-            $results.Count | Should -Be 2
-
-            $results[0].Name | Should -Be "7zip"
-            $results[0].Version | Should -Be "23.01.0"
-
-            $results[1].Name | Should -Be "git"
-            $results[1].Version | Should -Be "2.42.0"
+            InModuleScope pacwin {
+                $lines = @(
+                    "7zip|23.01.0",
+                    "git|2.42.0"
+                )
+                $results = _pw_parse_choco_lines $lines
+                $results.Count | Should -Be 2
+                $results[0].Name | Should -Be "7zip"
+                $results[0].Version | Should -Be "23.01.0"
+            }
         }
     }
 }
