@@ -421,6 +421,128 @@ function _pw_search_all {
 
 #region -- Main Entry Point ---------------------------------
 
+function _pw_parse_args {
+    param(
+        [string]$Command,
+        [string]$Query,
+        [string[]]$Unbound
+    )
+
+    $allArgs = New-Object System.Collections.Generic.List[string]
+    if ($Command) { [void]$allArgs.Add($Command) }
+    if ($Query) { [void]$allArgs.Add($Query) }
+    if ($Unbound) { foreach ($a in $Unbound) { [void]$allArgs.Add($a) } }
+
+    if ($allArgs.Count -gt 0) {
+        $flagIdx = -1
+        $flagRegex = "^-(S|Ss|R|Q|Qu|Syu|Si|V|h|v)$|^--(help|version)$"
+        
+        for ($i = 0; $i -lt $allArgs.Count; $i++) {
+            if ($allArgs[$i] -match $flagRegex) {
+                $flagIdx = $i
+                break
+            }
+        }
+
+        if ($flagIdx -ne -1) {
+            $foundFlag = $allArgs[$flagIdx]
+            $allArgs.RemoveAt($flagIdx)
+            $Command = $foundFlag
+            $Query = if ($allArgs.Count -gt 0) { $allArgs[0] } else { $null }
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Command)) { $Command = "help" }
+
+    return [PSCustomObject]@{
+        Command = $Command
+        Query   = $Query
+    }
+}
+
+function _pw_check_admin_requirements {
+    param(
+        [hashtable]$managers,
+        [string]$Manager,
+        [string]$Command
+    )
+
+    if (-not (_pw_is_admin)) {
+        if ($Manager -eq "choco" -or ($null -eq $Manager -and $managers["choco"])) {
+            if ($Command -match "^(install|uninstall|update|upgrade|import|pin|unpin|hold|unhold|-S|-R|-Syu)") {
+                _pw_color "  [!] Warning: You are running as a standard user." Yellow
+                _pw_color "      Chocolatey (choco) usually requires Administrator privileges to perform this action." Yellow
+                _pw_color ""
+            }
+        }
+    }
+}
+
+function _pw_show_help {
+    _pw_color "  Core Commands" Cyan
+    _pw_color "    search <q>        Find packages in all managers (-Ss)" White
+    _pw_color "    install <id>      Search and install a package (-S)" White
+    _pw_color "    uninstall <id>    Remove a package from the system (-R)" White
+    _pw_color ""
+    _pw_color "  Maintenance" Cyan
+    _pw_color "    update [id]       Upgrade one or all packages (-Syu)" White
+    _pw_color "    outdated          Show packages with newer versions (-Qu)" White
+    _pw_color "    doctor            Check environment health" White
+    _pw_color ""
+    _pw_color "  Management" Cyan
+    _pw_color "    list [filter]     Show installed packages (-Q)" White
+    _pw_color "    hold [id]         Pin/unpin versions (prevents updates)" White
+    _pw_color "    sync              Detect and fix duplicate installs" White
+    _pw_color ""
+    _pw_color "  System" Cyan
+    _pw_color "    status            Show manager paths" White
+    _pw_color "    self-update       Update pacwin script to latest" White
+    _pw_color "    help              Show this menu" White
+    _pw_color ""
+    _pw_color "  Example:" Gray
+    _pw_color "    pacwin search nodejs" White
+}
+
+function _pw_handle_update {
+    param(
+        [hashtable]$targetManagers,
+        [string]$Query,
+        [string]$Manager
+    )
+
+    if ($Query) {
+        _pw_color "  Looking for update candidates for '$Query'..." Cyan
+        if ($Manager) {
+            _pw_do_update_single $Query $Manager
+        }
+        else {
+            _pw_color "  Searching in outdated packages..." Gray
+            $outdated = _pw_do_outdated $targetManagers -Silent
+            $targetMatches = @($outdated | Where-Object { $_.ID -eq $Query -or $_.Name -eq $Query })
+
+            if ($targetMatches.Count -eq 0) {
+                _pw_color "  No outdated package found matching '$Query'. Trying direct update..." Gray
+                foreach ($m in $targetManagers.Keys) {
+                    _pw_do_update_single $Query $m
+                }
+            }
+            elseif ($targetMatches.Count -eq 1) {
+                _pw_do_update_single $targetMatches[0].ID $targetMatches[0].Manager
+            }
+            else {
+                _pw_color "  Multiple managers have updates for '$Query':" Yellow
+                $pkg = _pw_pick_source $targetMatches
+                if ($pkg) {
+                    _pw_do_update_single $pkg.ID $pkg.Manager
+                }
+            }
+        }
+    }
+    else {
+        _pw_do_update_all $targetManagers
+    }
+}
+
 function pacwin {
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -446,37 +568,12 @@ function pacwin {
         [Parameter(ValueFromRemainingArguments = $true)]
         [string[]]$_pw_unbound
     )
-    
-    # -- Manual Argument Parsing for Pacman Shorthand flags --
-    # Re-align arguments if shorthand flags like -S, -Ss, -R are used.
-    # We collect everything (positional + unbound) to determine the real command.
-    $allArgs = New-Object System.Collections.Generic.List[string]
-    if ($Command) { [void]$allArgs.Add($Command) }
-    if ($Query) { [void]$allArgs.Add($Query) }
-    if ($_pw_unbound) { foreach ($a in $_pw_unbound) { [void]$allArgs.Add($a) } }
 
-    if ($allArgs.Count -gt 0) {
-        $flagIdx = -1
-        # Regex to identify shorthand flags (Pacman-style)
-        $flagRegex = "^-(S|Ss|R|Q|Qu|Syu|Si|V|h|v)$|^--(help|version)$"
-        
-        for ($i = 0; $i -lt $allArgs.Count; $i++) {
-            if ($allArgs[$i] -match $flagRegex) {
-                $flagIdx = $i
-                break
-            }
-        }
+    # Normalize command and query from input
+    $parsed = _pw_parse_args -Command $Command -Query $Query -Unbound $_pw_unbound
+    $Command = $parsed.Command
+    $Query = $parsed.Query
 
-        if ($flagIdx -ne -1) {
-            $foundFlag = $allArgs[$flagIdx]
-            $allArgs.RemoveAt($flagIdx)
-            $Command = $foundFlag
-            # The next available argument is treated as the Query (package name)
-            $Query = if ($allArgs.Count -gt 0) { $allArgs[0] } else { $null }
-        }
-    }
-
-    if ([string]::IsNullOrWhiteSpace($Command)) { $Command = "help" }
     $managers = _pw_detect_managers
     $targetManagers = _pw_filter_manager $managers $Manager
 
@@ -486,15 +583,7 @@ function pacwin {
     if (-not $targetManagers) { return }
 
     # Global Admin check for choco/winget operations
-    if (-not (_pw_is_admin)) {
-        if ($Manager -eq "choco" -or ($null -eq $Manager -and $managers["choco"])) {
-            if ($Command -match "^(install|uninstall|update|upgrade|import|pin|unpin|hold|unhold|-S|-R|-Syu)") {
-                _pw_color "  [!] Warning: You are running as a standard user." Yellow
-                _pw_color "      Chocolatey (choco) usually requires Administrator privileges to perform this action." Yellow
-                _pw_color ""
-            }
-        }
-    }
+    _pw_check_admin_requirements -managers $managers -Manager $Manager -Command $Command
 
     if ($Query) {
         $Query = _pw_sanitize $Query
@@ -539,39 +628,7 @@ function pacwin {
         }
 
         "^(update|upgrade|-Syu)$" {
-            if ($Query) {
-                _pw_color "  Looking for update candidates for '$Query'..." Cyan
-                if ($Manager) {
-                    _pw_do_update_single $Query $Manager
-                }
-                else {
-                    # Try to find which manager has it
-                    _pw_color "  Searching in outdated packages..." Gray
-                    $outdated = _pw_do_outdated $targetManagers -Silent
-                    $targetMatches = @($outdated | Where-Object { $_.ID -eq $Query -or $_.Name -eq $Query })
-
-                    if ($targetMatches.Count -eq 0) {
-                        _pw_color "  No outdated package found matching '$Query'. Trying direct update..." Gray
-                        # Fallback: Try all target managers
-                        foreach ($m in $targetManagers.Keys) {
-                            _pw_do_update_single $Query $m
-                        }
-                    }
-                    elseif ($targetMatches.Count -eq 1) {
-                        _pw_do_update_single $targetMatches[0].ID $targetMatches[0].Manager
-                    }
-                    else {
-                        _pw_color "  Multiple managers have updates for '$Query':" Yellow
-                        $pkg = _pw_pick_source $targetMatches
-                        if ($pkg) { 
-                            _pw_do_update_single $pkg.ID $pkg.Manager 
-                        }
-                    }
-                }
-            }
-            else {
-                _pw_do_update_all $targetManagers
-            }
+            _pw_handle_update -targetManagers $targetManagers -Query $Query -Manager $Manager
         }
 
         "^(outdated|-Qu)$" {
@@ -637,28 +694,7 @@ function pacwin {
         }
 
         "^(help|--help|-h)$" {
-            _pw_color "  Core Commands" Cyan
-            _pw_color "    search <q>        Find packages in all managers (-Ss)" White
-            _pw_color "    install <id>      Search and install a package (-S)" White
-            _pw_color "    uninstall <id>    Remove a package from the system (-R)" White
-            _pw_color ""
-            _pw_color "  Maintenance" Cyan
-            _pw_color "    update [id]       Upgrade one or all packages (-Syu)" White
-            _pw_color "    outdated          Show packages with newer versions (-Qu)" White
-            _pw_color "    doctor            Check environment health" White
-            _pw_color ""
-            _pw_color "  Management" Cyan
-            _pw_color "    list [filter]     Show installed packages (-Q)" White
-            _pw_color "    hold [id]         Pin/unpin versions (prevents updates)" White
-            _pw_color "    sync              Detect and fix duplicate installs" White
-            _pw_color ""
-            _pw_color "  System" Cyan
-            _pw_color "    status            Show manager paths" White
-            _pw_color "    self-update       Update pacwin script to latest" White
-            _pw_color "    help              Show this menu" White
-            _pw_color ""
-            _pw_color "  Example:" Gray
-            _pw_color "    pacwin search nodejs" White
+            _pw_show_help
         }
 
         "^(version|--version|-v)$" {
