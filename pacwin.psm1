@@ -16,14 +16,9 @@ if ($PSVersionTable.PSVersion.Major -lt 6) {
 #region -- Security & Validation -----------------------------
 
 function _pw_sanitize {
-    # Validates general input: allowed characters are a-z, A-Z, 0-9, ., _, -, @, /
-    param([string]$targetInput)
-    if (-not $targetInput) { return $null }
-    if ($targetInput -match '^[a-zA-Z0-9\._\-@/]+$') {
-        return $targetInput
-    }
-    _pw_color "  [!] Input detected as a potential security risk: '$targetInput'" Red
-    return $null
+    param([string]$inputStr)
+    if ([string]::IsNullOrWhiteSpace($inputStr)) { return "" }
+    return $inputStr -replace "[^\w\.\-\+]", ""
 }
 
 function _pw_validate_path {

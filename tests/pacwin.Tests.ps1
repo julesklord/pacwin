@@ -92,18 +92,30 @@ Describe "pacwin core logic" {
     }
 
     Context "Security & Sanitization" {
-        It "Allows safe package IDs" {
+        It "Returns empty string for empty or null inputs" {
             InModuleScope pacwin {
-                _pw_sanitize "google.chrome" | Should -Be "google.chrome"
+                _pw_sanitize "" | Should -Be ""
+                _pw_sanitize "   " | Should -Be ""
+                _pw_sanitize $null | Should -Be ""
             }
         }
 
-        It "Blocks dangerous input" {
+        It "Preserves valid characters (\w, ., -, +)" {
             InModuleScope pacwin {
-                _pw_sanitize 'bad; comando' | Should -Be $null
-                _pw_sanitize "'; rm -r /'" | Should -Be $null
-                _pw_sanitize '$(whoami)' | Should -Be $null
-                _pw_sanitize '`Get-Process`' | Should -Be $null
+                _pw_sanitize "google.chrome" | Should -Be "google.chrome"
+                _pw_sanitize "valid-id+123_abc" | Should -Be "valid-id+123_abc"
+            }
+        }
+
+        It "Strips out invalid characters (spaces, @, /, ;, etc.)" {
+            InModuleScope pacwin {
+                _pw_sanitize "google chrome" | Should -Be "googlechrome"
+                _pw_sanitize "all.valid-chars_@/123" | Should -Be "all.valid-chars_123"
+                _pw_sanitize 'bad; comando' | Should -Be "badcomando"
+                _pw_sanitize "'; rm -r /'" | Should -Be "rm-r"
+                _pw_sanitize '$(whoami)' | Should -Be "whoami"
+                _pw_sanitize '`Get-Process`' | Should -Be "Get-Process"
+                _pw_sanitize "google`nchrome" | Should -Be "googlechrome"
             }
         }
     }
