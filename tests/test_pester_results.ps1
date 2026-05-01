@@ -239,7 +239,7 @@ function _pw_search_all {
         $finished = $job | Wait-Job -Timeout 25
         if ($finished) {
             $raw = Receive-Job $job -ErrorAction SilentlyContinue
-            $lines = @($raw | ForEach-Object { "$_" })
+            $lines = [System.Collections.Generic.List[string]]::new($raw.Count); foreach ($r in $raw) { $lines.Add([string]$r) }
             switch ($key) {
                 "winget" { $parsed = _pw_parse_winget_lines $lines }
                 "choco" { $parsed = _pw_parse_choco_lines  $lines }
@@ -349,9 +349,9 @@ function pacwin {
 
         "^(status)$" {
             _pw_color "  Gestores detectados:" Cyan
-            $managers.Keys | ForEach-Object {
-                _pw_color "  • $_ " Cyan -NoNewline
-                _pw_color "-> $($managers[$_])" DarkGray
+            foreach ($mgr in $managers.Keys) {
+                _pw_color "  • $mgr " Cyan -NoNewline
+                _pw_color "-> $($managers[$mgr])" DarkGray
             }
         }
 
