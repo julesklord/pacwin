@@ -13,7 +13,7 @@ RootModule = 'pacwin.psm1'
 
 
 # Version number of this module.
-ModuleVersion = '0.2.6'
+ModuleVersion = '0.2.7'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -108,7 +108,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'v0.2.6: Comprehensive parser tests, Strict Mode 2.0 enforcement, centralized error handling, and robust injection blocking.'
+        ReleaseNotes = 'v0.2.7: Interactive search by default (yaourt-style), improved user experience with numbered package selection.'
 
         # Prerelease string of this module
         # Prerelease = ''
