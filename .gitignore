@@ -2,7 +2,6 @@
 *.bak.*
 *.bak
 # Temporary walkthroughs
-*.md
 walkthrough_*.md
 
 # Session logs (brain directory is outside, but just in case)
@@ -29,3 +28,4 @@ CLAUDE.md
 *.log
 .claude/
 .scratch/
+.vs/

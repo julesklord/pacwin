@@ -2,7 +2,7 @@
 #  pacwin.psm1  -  Universal Package Layer for Windows
 #  Abstraction over: winget | chocolatey | scoop
 #  Compatible: PowerShell 5.1 + PowerShell 7+
-#  v0.2.6 (Security & Testing Hardening)
+#  v0.2.7 (Interactive search by default)
 # ============================================================
 
 Set-StrictMode -Version 2.0
@@ -58,11 +58,11 @@ function _pw_color {
 function _pw_header {
     param($managers)
     _pw_color ""
-    _pw_color "  >> " Cyan -NoNewline
-    _pw_color "pacwin" White -NoNewline
-    _pw_color " v0.2.6" DarkGray -NoNewline
-    _pw_color "  --  " DarkGray -NoNewline
-    _pw_color "universal package layer" DarkGray
+        _pw_color "  >> " Cyan -NoNewline
+        _pw_color "pacwin" White -NoNewline
+        _pw_color " v0.2.7" DarkGray -NoNewline
+        _pw_color "  --  " DarkGray -NoNewline
+        _pw_color "universal package layer" DarkGray
 
     if ($null -ne $managers) {
         _pw_color "  [" DarkGray -NoNewline
@@ -480,9 +480,9 @@ function _pw_check_admin_requirements {
 
 function _pw_show_help {
     _pw_color "  Core Commands" Cyan
-    _pw_color "    search <q>        Find packages in all managers (-Ss)" White
+    _pw_color "    search <q>        Find packages, pick # to install (-Ss)" White
+    _pw_color "    search <q> -ni   Non-interactive: just list results" White
     _pw_color "    install <id>      Search and install a package (-S)" White
-    _pw_color "    uninstall <id>    Remove a package from the system (-R)" White
     _pw_color ""
     _pw_color "  Maintenance" Cyan
     _pw_color "    update [id]       Upgrade one or all packages (-Syu)" White
@@ -565,11 +565,20 @@ function pacwin {
         [Parameter()]
         [switch]$NoHeader,
 
+        [Parameter()]
+        [switch]$NoInteractive,
+
         [Parameter(ValueFromRemainingArguments = $true)]
         [string[]]$_pw_unbound
     )
 
     # Normalize command and query from input
+    # Handle -ni / -NoInteractive from _pw_unbound (PowerShell may not bind it correctly in all cases)
+    if ($_pw_unbound -contains "-ni" -or $_pw_unbound -contains "-NoInteractive") {
+        $NoInteractive = $true
+        $_pw_unbound = @($_pw_unbound | Where-Object { $_ -ne "-ni" -and $_ -ne "-NoInteractive" })
+    }
+    
     $parsed = _pw_parse_args -Command $Command -Query $Query -Unbound $_pw_unbound
     $Command = $parsed.Command
     $Query = $parsed.Query
@@ -594,8 +603,20 @@ function pacwin {
         "^(search|-Ss)$" {
             if (-not $Query) { _pw_color "  [!] Search term missing." Yellow; return }
             _pw_color "  > Searching for '$Query'..." Cyan
-            $results = _pw_search_all $targetManagers $Query $Limit $Timeout
+            $results = @(_pw_search_all $targetManagers $Query $Limit $Timeout)
             _pw_render_results $results $Query
+
+            if (-not $NoInteractive -and $results.Count -gt 0) {
+                _pw_color ""
+                $choice = Read-Host "  Install # (Enter to cancel)"
+                if ([string]::IsNullOrWhiteSpace($choice)) { return }
+                $idx = 0
+                if (-not [int]::TryParse($choice, [ref]$idx) -or $idx -lt 1 -or $idx -gt $results.Count) {
+                    _pw_color "  Invalid selection." Red; return
+                }
+                $pkg = $results[$idx - 1]
+                _pw_do_install $pkg
+            }
         }
 
         "^(info|-Si)$" {
@@ -684,7 +705,7 @@ function pacwin {
         }
 
         "^(version|-V|--version)$" {
-            _pw_color "  pacwin v0.2.6" Cyan
+            _pw_color "  pacwin v0.2.7" Cyan
             _pw_color "  PowerShell $($PSVersionTable.PSVersion)" Gray
             return
         }
@@ -699,7 +720,7 @@ function pacwin {
 
         "^(version|--version|-v)$" {
             _pw_color "  pacwin" White -NoNewline
-            _pw_color " v0.2.6" Gray
+            _pw_color " v0.2.7" Gray
         }
 
         Default {
@@ -1487,6 +1508,15 @@ Register-ArgumentCompleter -CommandName pacwin -ParameterName Manager -ScriptBlo
     foreach ($mgr in @('winget','choco','scoop').Where({ $_ -like "$wordToComplete*" })) {
         [System.Management.Automation.CompletionResult]::new($mgr, $mgr,
             [System.Management.Automation.CompletionResultType]::ParameterValue, $mgr)
+    }
+}
+
+# Tab completion for -NoInteractive flag
+Register-ArgumentCompleter -CommandName pacwin -ParameterName NoInteractive -ScriptBlock {
+    param($commandName, $parameterName, $wordToComplete)
+    foreach ($opt in @('$true','$false','-ni','-NoInteractive').Where({ $_ -like "$wordToComplete*" })) {
+        [System.Management.Automation.CompletionResult]::new($opt, $opt,
+            [System.Management.Automation.CompletionResultType]::ParameterValue, $opt)
     }
 }
 

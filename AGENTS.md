@@ -1,42 +1,39 @@
 # AGENTS.md - AI Agent Instructions for pacwin
 
-## Project Overview
+## Project
 
-pacwin is a PowerShell module that unifies winget, chocolatey, and scoop under a fast, pacman-like CLI for Windows package management. It uses a hybrid concurrency engine (Runspaces in PS 5.1, Parallel in PS 7+) for performance.
+Single-file PowerShell module (~1400 lines, `pacwin.psm1`). No build step. Edit the `.psm1` directly; manifest is `pacwin.psd1`.
 
-## Key Conventions
+## Conventions
 
-- **Internal Functions**: Prefix with `_pw_` (e.g., `_pw_search_all`) to avoid global namespace pollution.
-- **Error Handling**: Use colored output (Green/Yellow/Red) and custom exit-code parsing for manager-specific errors.
-- **Input Validation**: Regex sanitization blocks injection; only allows `a-zA-Z0-9\._\-@/`.
-- **Code Organization**: Use `#region` blocks for logical sections.
-- **UI**: ASCII tables, real-time indicators, pacman-like flags (`-S` install, `-R` remove).
+- **Internal functions**: `_pw_` prefix (e.g., `_pw_search_all`). Module-scoped.
+- **StrictMode**: `Set-StrictMode -Version 2.0` enforced module-wide.
+- **Security**: No `Invoke-Expression`. Input sanitization via `_pw_sanitize` (allows `a-zA-Z0-9._\-@/`).
+- **Output**: ASCII tables, colored (Green/Yellow/Red). Pacman flags (`-S`/`-R`) and verbose commands.
 
-## Build and Test Commands
+## Commands
 
-- **Run Tests**: `Import-Module ./tests/modules/Pester; Invoke-Pester ./tests/pacwin.Tests.ps1`
-- **Install Locally**: `.\install.ps1` (copies module and updates profile)
-- **No Formal Build**: Script module; edit `pacwin.psm1` directly.
+- **Search interactive**: `pacwin search <q>` or `pacwin -Ss <q>` — shows numbered list, prompts for selection, installs chosen package. This is the default behavior.
+- **Search non-interactive**: `pacwin search <q> -NoInteractive` or `-ni` — just lists results.
+- **Test all**: `Import-Module ./tests/modules/Pester; Invoke-Pester ./tests`
+- **Test single file**: `Invoke-Pester ./tests/parsers.Tests.ps1`
+- **Install locally**: `.\install.ps1`
+- **CI**: GitHub Actions installs Pester from gallery; local uses bundled Pester 5.5.
 
-## Common Pitfalls
+## Architecture
 
-- Requires at least one manager (winget/choco/scoop) in PATH.
-- Admin rights needed for choco/winget; warn but don't auto-elevate.
-- Scoop searches timeout if buckets stale; run `scoop update`.
-- PS 5.1 lacks Parallel; uses Runspaces but may have encoding issues.
-- Execution policy may block scripts; suggest `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`.
+- **Concurrency**: RunspacePool (PS 5.1) or `ForEach-Object -Parallel` (PS 7+). Same-process.
+- **Parsers**: Per-manager output → `[List[PSCustomObject]]` with unary comma wrapping.
+- **Installs**: Synchronous to prevent conflicts.
 
-## Architecture Notes
+## Pitfalls
 
-- Single `.psm1` file for zero overhead.
-- Manager abstraction with per-manager parsers.
-- Synchronous installs to prevent conflicts.
+- Needs ≥1 package manager (winget/choco/scoop) in PATH. `pacwin doctor` to verify.
+- Admin rights for choco/winget; warn, don't auto-elevate.
+- Scoop searches timeout on stale buckets; `scoop update` to refresh.
+- PS 5.1 Runspaces may mangle encoding.
+- Execution policy may block scripts; `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`.
 
-## Links to Documentation
+## Tooling
 
-- **[README.md](README.md)**: Overview and quick start.
-- **[wiki/Command_Reference.md](wiki/Command_Reference.md)**: Full command syntax.
-- **[wiki/Installation.md](wiki/Installation.md)**: Detailed installation.
-- **[CHANGELOG.md](CHANGELOG.md)**: Version history.
-- **[scratch/DOCUMENTATION.md](scratch/DOCUMENTATION.md)**: Technical deep-dive.
-- **[scratch/features.md](scratch/features.md)**: Feature roadmap.
+- **Lint**: Trunk (`.trunk/trunk.yaml`) with prettier, node@22.16.0, python@3.10.8
