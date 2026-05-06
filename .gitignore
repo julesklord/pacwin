@@ -2,7 +2,6 @@
 *.bak.*
 *.bak
 # Temporary walkthroughs
-*.md
 walkthrough_*.md
 
 # Session logs (brain directory is outside, but just in case)
@@ -13,19 +12,13 @@ obj/
 docs/artifacts/
 .agents/
 .gemini/
-.claude/
+.vibecheck/
 .snapshots/
 .vscode/
 pacwin.code-workspace
+.cursor/
 /workflows/
 CLAUDE.md
-.claude/
-.cursor/
-.gemini/
-.vibecheck/
-.snapshots/
-.gemini/
-.snapshots/
 *.cast
 .bin/
 *.ps1.txt
@@ -33,3 +26,8 @@ CLAUDE.md
 *_audit.md
 *.txt
 *.log
+.claude/
+.scratch/
+.vs/
+
+gemini.md

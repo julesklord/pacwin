@@ -12,15 +12,9 @@ $ErrorActionPreference = "Continue"
 #region ── Security & Validation ─────────────────────────────
 
 function _pw_sanitize {
-    param([string]$input)
-    if (-not $input) { return $null }
-    # Solo permite alfanuméricos, puntos, guiones y underscores (IDs estándar de paquetes)
-    # Bloquea caracteres peligrosos como ; | & < > ` $
-    if ($input -match '^[a-zA-Z0-9\._\-@/]+$') {
-        return $input
-    }
-    _pw_color "  [!] Input detectado como potencial riesgo de seguridad: '$input'" Red
-    return $null
+    param([string]$inputStr)
+    if ([string]::IsNullOrWhiteSpace($inputStr)) { return "" }
+    return $inputStr -replace "[^\w\.\-\+]", ""
 }
 
 #endregion

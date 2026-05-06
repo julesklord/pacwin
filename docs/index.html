@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>pacwin — Universal Package Manager for Windows</title>
+<meta name="description" content="pacwin unifies winget, chocolatey, and scoop under a single pacman-inspired CLI for Windows. One command. Three managers. Zero excuses."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#4fc3f7;
+  --green:#69f0ae;
+  --red:#ef5350;
+  --bg:#0a0a0f;
+  --bg2:#0f0f1a;
+  --surface:#141420;
+  --border:#1e1e30;
+  --border2:#2a2a40;
+  --text:#c9d1d9;
+  --muted:#6e7681;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Inter',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
+
+/* Grid bg */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:40px 40px;
+  opacity:.4;pointer-events:none;z-index:0;
+}
+
+/* Glow orbs */
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.orb1{width:600px;height:600px;top:-200px;left:-200px;background:radial-gradient(circle,rgba(79,195,247,.12),transparent 70%)}
+.orb2{width:500px;height:500px;bottom:-100px;right:-100px;background:radial-gradient(circle,rgba(105,240,174,.08),transparent 70%)}
+
+/* Layout */
+.container{max-width:1100px;margin:0 auto;padding:0 2rem;position:relative;z-index:1}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);backdrop-filter:blur(16px);background:rgba(10,10,15,.85)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;padding:.85rem 2rem;max-width:1100px;margin:0 auto}
+.logo{font-size:1.1rem;font-weight:700;color:var(--blue);letter-spacing:-.02em}
+.logo span{color:var(--green)}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;transition:color .2s}
+.nav-links a:hover{color:var(--blue)}
+.nav-badge{background:var(--surface);border:1px solid var(--border2);padding:.25rem .6rem;font-size:.7rem;color:var(--green)}
+
+/* HERO */
+.hero{padding:6rem 0 4rem;text-align:center}
+.hero-tag{display:inline-block;border:1px solid var(--border2);color:var(--muted);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;padding:.3rem .8rem;margin-bottom:2rem}
+.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:700;line-height:1.1;letter-spacing:-.03em;margin-bottom:1.5rem}
+.hero h1 .hl-blue{color:var(--blue)}
+.hero h1 .hl-green{color:var(--green)}
+.hero-sub{color:var(--muted);font-size:1rem;max-width:560px;margin:0 auto 2.5rem;line-height:1.7}
+.hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.6rem;font-family:var(--mono);font-size:.8rem;font-weight:700;letter-spacing:.05em;cursor:pointer;text-decoration:none;transition:all .2s;text-transform:uppercase}
+.btn-primary{background:var(--blue);color:#000;border:1px solid var(--blue)}
+.btn-primary:hover{background:transparent;color:var(--blue)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue)}
+
+/* TERMINAL WINDOW */
+.terminal-wrap{max-width:700px;margin:3rem auto 0;background:var(--bg2);border:1px solid var(--border2);overflow:hidden}
+.terminal-bar{background:#1c1c2e;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.t-dots{display:flex;gap:.4rem}
+.t-dot{width:10px;height:10px;border-radius:50%}
+.t-dot.r{background:#ef5350}.t-dot.y{background:#ffa726}.t-dot.g{background:#66bb6a}
+.t-title{font-size:.7rem;color:var(--muted)}
+.terminal-body{padding:1.5rem;font-size:.82rem;line-height:2}
+.t-prompt{color:var(--blue)}
+.t-cmd{color:var(--green)}
+.t-comment{color:var(--muted)}
+.t-out{color:var(--text);padding-left:1.2rem}
+.scanline{height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);animation:scan 3s linear infinite}
+@keyframes scan{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+/* STATS BAR */
+.stats{display:flex;gap:0;border:1px solid var(--border2);margin:4rem 0;overflow:hidden}
+.stat{flex:1;padding:1.5rem;text-align:center;border-right:1px solid var(--border2)}
+.stat:last-child{border-right:none}
+.stat-num{font-size:1.8rem;font-weight:700;color:var(--blue)}
+.stat-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:.25rem}
+
+/* SECTION */
+section{padding:4rem 0;border-top:1px solid var(--border)}
+.section-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem}
+.section-title{font-size:1.4rem;font-weight:700;color:var(--text);margin-bottom:.75rem}
+.section-title span{color:var(--blue)}
+.section-desc{color:var(--muted);font-size:.85rem;line-height:1.7;max-width:500px}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;margin-top:2rem}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{background:var(--surface);color:var(--blue);padding:.6rem 1rem;text-align:left;border:1px solid var(--border2);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+tbody td{padding:.6rem 1rem;border:1px solid var(--border);color:var(--text);vertical-align:middle}
+tbody tr:hover td{background:var(--surface);border-color:var(--border2)}
+.td-verb{color:var(--green)}
+.td-flag{color:var(--blue)}
+.td-pain{color:var(--red)}
+
+/* FEATURES GRID */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-top:2rem}
+.feat-card{background:var(--surface);border:1px solid var(--border2);padding:1.5rem;transition:border-color .2s,transform .2s}
+.feat-card:hover{border-color:var(--blue);transform:translateY(-2px)}
+.feat-icon{font-size:1.4rem;margin-bottom:.75rem}
+.feat-title{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;color:var(--text)}
+.feat-desc{font-size:.75rem;color:var(--muted);line-height:1.6}
+
+/* INSTALL */
+.install-box{background:var(--bg2);border:1px solid var(--border2);padding:1.5rem;margin-top:1.5rem}
+.install-row{display:flex;align-items:flex-start;gap:.75rem;margin-bottom:.5rem}
+.install-row:last-child{margin-bottom:0}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:2.5rem 0}
+.footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+.footer-logo{font-size:1rem;font-weight:700;color:var(--blue)}
+.footer-links{display:flex;gap:1.5rem}
+.footer-links a{color:var(--muted);font-size:.7rem;text-decoration:none;text-transform:uppercase;letter-spacing:.06em;transition:color .2s}
+.footer-links a:hover{color:var(--blue)}
+.status-pill{display:flex;align-items:center;gap:.5rem;font-size:.65rem;color:var(--green);text-transform:uppercase;letter-spacing:.08em}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Responsive */
+@media(max-width:640px){
+  .stats{flex-direction:column}
+  .stat{border-right:none;border-bottom:1px solid var(--border2)}
+  .nav-links{display:none}
+  .hero{padding:4rem 0 2rem}
+}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="logo">C:\&gt; pac<span>win</span>_</div>
+    <ul class="nav-links">
+      <li><a href="#install">Install</a></li>
+      <li><a href="#commands">Commands</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="https://github.com/julesklord/pacwin" target="_blank">GitHub</a></li>
+    </ul>
+    <span class="nav-badge">v0.2.6</span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="container">
+  <div class="hero">
+    <div class="hero-tag">// PowerShell Module — Windows 10+ — PS 5.1+</div>
+    <h1>
+      One CLI.<br/>
+      <span class="hl-blue">Three managers.</span><br/>
+      <span class="hl-green">Zero excuses.</span>
+    </h1>
+    <p class="hero-sub">
+      pacwin unifies winget, chocolatey, and scoop behind a single pacman-inspired interface. Search, install, remove, and update packages across all three — with one command.
+    </p>
+    <div class="hero-btns">
+      <a href="#install" class="btn btn-primary">⬇ Get Started</a>
+      <a href="https://github.com/julesklord/pacwin" target="_blank" class="btn btn-ghost">View Source →</a>
+    </div>
+  </div>
+
+  <!-- TERMINAL DEMO -->
+  <div class="terminal-wrap">
+    <div class="terminal-bar">
+      <div class="t-dots">
+        <div class="t-dot r"></div>
+        <div class="t-dot y"></div>
+        <div class="t-dot g"></div>
+      </div>
+      <span class="t-title">Administrator: Windows PowerShell</span>
+      <span style="width:60px"></span>
+    </div>
+    <div class="terminal-body">
+      <div><span class="t-prompt">PS C:\&gt; </span><span class="t-cmd">pacwin -Ss vlc</span></div>
+      <div class="t-out">[1] VLC media player &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VideoLAN.VLC &nbsp; 3.0.23 &nbsp; winget</div>
+      <div class="t-out">[2] vlc &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vlc &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 3.0.23 &nbsp; choco</div>
+      <div>&nbsp;</div>
+      <div><span class="t-prompt">PS C:\&gt; </span><span class="t-cmd">pacwin -S VideoLAN.VLC</span></div>
+      <div class="t-out" style="color:var(--green)">[✓] Installed VideoLAN.VLC via winget</div>
+      <div>&nbsp;</div>
+      <div><span class="t-prompt">PS C:\&gt; </span><span class="t-comment"># Or use verbose commands</span></div>
+      <div><span class="t-prompt">PS C:\&gt; </span><span class="t-cmd">pacwin search firefox</span></div>
+    </div>
+    <div class="scanline"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat"><div class="stat-num">3</div><div class="stat-lbl">Package Managers</div></div>
+    <div class="stat"><div class="stat-num">1</div><div class="stat-lbl">Unified CLI</div></div>
+    <div class="stat"><div class="stat-num">0</div><div class="stat-lbl">External Deps</div></div>
+    <div class="stat"><div class="stat-num">PS 5.1</div><div class="stat-lbl">Min Version</div></div>
+  </div>
+
+  <!-- INSTALL -->
+  <section id="install">
+    <div class="section-label">// 01_installation</div>
+    <div class="section-title">Get <span>pacwin</span> running in 30 seconds</div>
+    <p class="section-desc">No build step. No binary. Just a PowerShell module you can pipe and run.</p>
+    <div class="install-box">
+      <div class="install-row">
+        <span class="t-prompt">PS C:\&gt;</span>
+        <code style="color:var(--green);font-size:.82rem">iwr -useb https://raw.githubusercontent.com/julesklord/pacwin/main/get-pacwin.ps1 | iex</code>
+      </div>
+      <div style="color:var(--muted);font-size:.72rem;padding-left:1.2rem;margin:.5rem 0">— or via PowerShell Gallery —</div>
+      <div class="install-row">
+        <span class="t-prompt">PS C:\&gt;</span>
+        <code style="color:var(--green);font-size:.82rem">Install-Module -Name pacwin -Scope CurrentUser</code>
+      </div>
+    </div>
+    <p style="margin-top:.75rem;font-size:.7rem;color:var(--muted)">REQ: PowerShell 5.1+ &nbsp;|&nbsp; Windows 10+ &nbsp;|&nbsp; At least one of: winget, choco, scoop in PATH</p>
+  </section>
+
+  <!-- COMMANDS -->
+  <section id="commands">
+    <div class="section-label">// 02_command_reference</div>
+    <div class="section-title"><span>pacwin</span> speaks two dialects</div>
+    <p class="section-desc">pacman-style flags for muscle memory. Verbose commands for readability. Both work.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Task</th><th>Verbose</th><th>pacman-style</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Search packages</td><td class="td-verb">pacwin search &lt;query&gt;</td><td class="td-flag">pacwin -Ss &lt;query&gt;</td></tr>
+          <tr><td>Install a package</td><td class="td-verb">pacwin install &lt;id&gt;</td><td class="td-flag">pacwin -S &lt;id&gt;</td></tr>
+          <tr><td>Uninstall a package</td><td class="td-verb">pacwin uninstall &lt;id&gt;</td><td class="td-flag">pacwin -R &lt;id&gt;</td></tr>
+          <tr><td>Update all packages</td><td class="td-verb">pacwin update</td><td class="td-flag">pacwin -Syu</td></tr>
+          <tr><td>List installed</td><td class="td-verb">pacwin list</td><td class="td-flag">pacwin -Q</td></tr>
+          <tr><td>Check outdated</td><td class="td-verb">pacwin outdated</td><td class="td-flag">pacwin -Qu</td></tr>
+          <tr><td>Pin / Hold version</td><td class="td-verb">pacwin hold &lt;id&gt;</td><td class="td-flag">pacwin pin &lt;id&gt;</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:1rem">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Flag</th><th>Effect</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td class="td-flag">-Manager</td><td>Target a specific manager</td><td class="td-verb">pacwin search git -Manager winget</td></tr>
+            <tr><td class="td-flag">-Limit</td><td>Max results per manager (default 40)</td><td class="td-verb">pacwin search node -Limit 10</td></tr>
+            <tr><td class="td-flag">-NoHeader</td><td>Skip the header banner</td><td class="td-verb">pacwin list -NoHeader</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY / PAIN POINT -->
+  <section>
+    <div class="section-label">// 03_the_problem</div>
+    <div class="section-title">Three tools. Three syntaxes. <span>Three headaches.</span></div>
+    <p class="section-desc">Without pacwin, every package manager speaks a different dialect.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Operation</th><th>winget</th><th>choco</th><th>scoop</th><th style="color:var(--green)">pacwin</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Search</td>
+            <td class="td-pain">winget search</td>
+            <td class="td-pain">choco search</td>
+            <td class="td-pain">scoop search</td>
+            <td class="td-verb">pacwin -Ss</td>
+          </tr>
+          <tr>
+            <td>Install</td>
+            <td class="td-pain">winget install</td>
+            <td class="td-pain">choco install</td>
+            <td class="td-pain">scoop install</td>
+            <td class="td-verb">pacwin -S</td>
+          </tr>
+          <tr>
+            <td>Error handling</td>
+            <td class="td-pain">HRESULT codes</td>
+            <td class="td-pain">Exit code 1 for everything</td>
+            <td class="td-pain">Silent failures</td>
+            <td class="td-verb">Normalized output</td>
+          </tr>
+          <tr>
+            <td>Parallel search</td>
+            <td class="td-pain">No</td>
+            <td class="td-pain">No</td>
+            <td class="td-pain">No</td>
+            <td class="td-verb">Yes (RunspacePool)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <div class="section-label">// 04_architecture</div>
+    <div class="section-title">Built for <span>real engineers</span></div>
+    <p class="section-desc">No-nonsense engineering. No bloat. No compiled binaries. Just PowerShell done right.</p>
+    <div class="features">
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-title">Concurrency Engine</div>
+        <div class="feat-desc">RunspacePool on PS 5.1. ForEach-Object -Parallel on PS 7+. Searches all three managers simultaneously — same process, shared memory.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔒</div>
+        <div class="feat-title">Security Model</div>
+        <div class="feat-desc">Strict regex input sanitization. Set-StrictMode -Version 2.0. No Invoke-Expression. Ever. Injection-resistant by design.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📦</div>
+        <div class="feat-title">Zero Dependencies</div>
+        <div class="feat-desc">Single .psm1 module. No compiled binaries, no DLL hell, no NuGet ceremony. Clone and import — done.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🎯</div>
+        <div class="feat-title">Manager Filtering</div>
+        <div class="feat-desc">Target winget, choco, or scoop individually with -Manager. Mix and match as needed without changing your workflow.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🖥️</div>
+        <div class="feat-title">Premium TUI</div>
+        <div class="feat-desc">ASCII tables, aligned columns, real-time progress indicators, colored output, and numbered selection — like a package manager should look.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🏴‍☠️</div>
+        <div class="feat-title">pacman Compat</div>
+        <div class="feat-desc">-S, -Ss, -R, -Q, -Syu — the flags you already know from Arch Linux. Full proxy wrapper so PowerShell doesn't fight you.</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">C:\&gt; pacwin_</div>
+      <div class="footer-links">
+        <a href="https://github.com/julesklord/pacwin" target="_blank">GitHub</a>
+        <a href="https://github.com/julesklord/pacwin/wiki" target="_blank">Docs</a>
+        <a href="https://github.com/julesklord/pacwin/blob/main/LICENSE" target="_blank">License</a>
+        <a href="https://github.com/julesklord/pacwin/releases" target="_blank">Releases</a>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        v0.2.6 — ONLINE
+      </div>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

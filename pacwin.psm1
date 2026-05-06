@@ -2,10 +2,10 @@
 #  pacwin.psm1  -  Universal Package Layer for Windows
 #  Abstraction over: winget | chocolatey | scoop
 #  Compatible: PowerShell 5.1 + PowerShell 7+
-#  v0.2.5 (Fixes & Stability)
+#  v0.2.7 (Interactive search by default)
 # ============================================================
 
-Set-StrictMode -Off
+Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Continue"
 
 # Force UTF8 for better character rendering in PS 5.1
@@ -16,12 +16,19 @@ if ($PSVersionTable.PSVersion.Major -lt 6) {
 #region -- Security & Validation -----------------------------
 
 function _pw_sanitize {
-    param([string]$targetInput)
-    if (-not $targetInput) { return $null }
-    if ($targetInput -match '^[a-zA-Z0-9\._\-@/]+$') {
-        return $targetInput
+    param([string]$inputStr)
+    if ([string]::IsNullOrWhiteSpace($inputStr)) { return "" }
+    return $inputStr -replace "[^\w\.\-\+]", ""
+}
+
+function _pw_validate_path {
+    # Validates file paths: allowed characters are \ / : . - _ a-z A-Z 0-9
+    param([string]$pathInput)
+    if (-not $pathInput) { return $null }
+    if ($pathInput -match '^[a-zA-Z0-9\._\-@/\\:]+$') {
+        return $pathInput
     }
-    _pw_color "  [!] Input detected as a potential security risk: '$targetInput'" Red
+    _pw_color "  [!] Path input detected as a potential security risk: '$pathInput'" Red
     return $null
 }
 
@@ -46,11 +53,11 @@ function _pw_color {
 function _pw_header {
     param($managers)
     _pw_color ""
-    _pw_color "  >> " Cyan -NoNewline
-    _pw_color "pacwin" White -NoNewline
-    _pw_color " v0.2.5" DarkGray -NoNewline
-    _pw_color "  --  " DarkGray -NoNewline
-    _pw_color "universal package layer" DarkGray
+        _pw_color "  >> " Cyan -NoNewline
+        _pw_color "pacwin" White -NoNewline
+        _pw_color " v0.2.7" DarkGray -NoNewline
+        _pw_color "  --  " DarkGray -NoNewline
+        _pw_color "universal package layer" DarkGray
 
     if ($null -ne $managers) {
         _pw_color "  [" DarkGray -NoNewline
@@ -233,7 +240,7 @@ function _pw_parse_winget_lines {
             Write-Debug "Failed to parse winget line: $line"
         }
     }
-    return $results
+    return ,$results
 }
 
 function _pw_parse_choco_lines {
@@ -251,7 +258,7 @@ function _pw_parse_choco_lines {
                 })
         }
     }
-    return $results
+    return ,$results
 }
 
 function _pw_parse_scoop_lines {
@@ -278,7 +285,7 @@ function _pw_parse_scoop_lines {
                 })
         }
     }
-    return $results
+    return ,$results
 }
 
 #endregion
@@ -384,7 +391,11 @@ function _pw_search_all {
         try {
             if ($t.AsyncResult.IsCompleted) {
                 $raw = $t.PowerShell.EndInvoke($t.AsyncResult)
+<<<<<<< HEAD
                 $lines = foreach ($r in $raw) { "$r" }
+=======
+                $lines = [System.Collections.Generic.List[string]]::new($raw.Count); foreach ($r in $raw) { $lines.Add([string]$r) }
+>>>>>>> origin/main
                 $parsed = @()
                 switch ($t.Key) {
                     "winget" { $parsed = _pw_parse_winget_lines $lines }
@@ -409,6 +420,128 @@ function _pw_search_all {
 
 #region -- Main Entry Point ---------------------------------
 
+function _pw_parse_args {
+    param(
+        [string]$Command,
+        [string]$Query,
+        [string[]]$Unbound
+    )
+
+    $allArgs = New-Object System.Collections.Generic.List[string]
+    if ($Command) { [void]$allArgs.Add($Command) }
+    if ($Query) { [void]$allArgs.Add($Query) }
+    if ($Unbound) { foreach ($a in $Unbound) { [void]$allArgs.Add($a) } }
+
+    if ($allArgs.Count -gt 0) {
+        $flagIdx = -1
+        $flagRegex = "^-(S|Ss|R|Q|Qu|Syu|Si|V|h|v)$|^--(help|version)$"
+
+        for ($i = 0; $i -lt $allArgs.Count; $i++) {
+            if ($allArgs[$i] -match $flagRegex) {
+                $flagIdx = $i
+                break
+            }
+        }
+
+        if ($flagIdx -ne -1) {
+            $foundFlag = $allArgs[$flagIdx]
+            $allArgs.RemoveAt($flagIdx)
+            $Command = $foundFlag
+            $Query = if ($allArgs.Count -gt 0) { $allArgs[0] } else { $null }
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Command)) { $Command = "help" }
+
+    return [PSCustomObject]@{
+        Command = $Command
+        Query   = $Query
+    }
+}
+
+function _pw_check_admin_requirements {
+    param(
+        [hashtable]$managers,
+        [string]$Manager,
+        [string]$Command
+    )
+
+    if (-not (_pw_is_admin)) {
+        if ($Manager -eq "choco" -or ($null -eq $Manager -and $managers["choco"])) {
+            if ($Command -match "^(install|uninstall|update|upgrade|import|pin|unpin|hold|unhold|-S|-R|-Syu)") {
+                _pw_color "  [!] Warning: You are running as a standard user." Yellow
+                _pw_color "      Chocolatey (choco) usually requires Administrator privileges to perform this action." Yellow
+                _pw_color ""
+            }
+        }
+    }
+}
+
+function _pw_show_help {
+    _pw_color "  Core Commands" Cyan
+    _pw_color "    search <q>        Find packages, pick # to install (-Ss)" White
+    _pw_color "    search <q> -ni   Non-interactive: just list results" White
+    _pw_color "    install <id>      Search and install a package (-S)" White
+    _pw_color ""
+    _pw_color "  Maintenance" Cyan
+    _pw_color "    update [id]       Upgrade one or all packages (-Syu)" White
+    _pw_color "    outdated          Show packages with newer versions (-Qu)" White
+    _pw_color "    doctor            Check environment health" White
+    _pw_color ""
+    _pw_color "  Management" Cyan
+    _pw_color "    list [filter]     Show installed packages (-Q)" White
+    _pw_color "    hold [id]         Pin/unpin versions (prevents updates)" White
+    _pw_color "    sync              Detect and fix duplicate installs" White
+    _pw_color ""
+    _pw_color "  System" Cyan
+    _pw_color "    status            Show manager paths" White
+    _pw_color "    self-update       Update pacwin script to latest" White
+    _pw_color "    help              Show this menu" White
+    _pw_color ""
+    _pw_color "  Example:" Gray
+    _pw_color "    pacwin search nodejs" White
+}
+
+function _pw_handle_update {
+    param(
+        [hashtable]$targetManagers,
+        [string]$Query,
+        [string]$Manager
+    )
+
+    if ($Query) {
+        _pw_color "  Looking for update candidates for '$Query'..." Cyan
+        if ($Manager) {
+            _pw_do_update_single $Query $Manager
+        }
+        else {
+            _pw_color "  Searching in outdated packages..." Gray
+            $outdated = _pw_do_outdated $targetManagers -Silent
+            $targetMatches = @($outdated | Where-Object { $_.ID -eq $Query -or $_.Name -eq $Query })
+
+            if ($targetMatches.Count -eq 0) {
+                _pw_color "  No outdated package found matching '$Query'. Trying direct update..." Gray
+                foreach ($m in $targetManagers.Keys) {
+                    _pw_do_update_single $Query $m
+                }
+            }
+            elseif ($targetMatches.Count -eq 1) {
+                _pw_do_update_single $targetMatches[0].ID $targetMatches[0].Manager
+            }
+            else {
+                _pw_color "  Multiple managers have updates for '$Query':" Yellow
+                $pkg = _pw_pick_source $targetMatches
+                if ($pkg) {
+                    _pw_do_update_single $pkg.ID $pkg.Manager
+                }
+            }
+        }
+    }
+    else {
+        _pw_do_update_all $targetManagers
+    }
+}
+
 function pacwin {
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -429,28 +562,36 @@ function pacwin {
         [int]$Timeout = 35,
 
         [Parameter()]
-        [switch]$NoHeader
+        [switch]$NoHeader,
+
+        [Parameter()]
+        [switch]$NoInteractive,
+
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$_pw_unbound
     )
+
+    # Normalize command and query from input
+    # Handle -ni / -NoInteractive from _pw_unbound (PowerShell may not bind it correctly in all cases)
+    if ($_pw_unbound -contains "-ni" -or $_pw_unbound -contains "-NoInteractive") {
+        $NoInteractive = $true
+        $_pw_unbound = @($_pw_unbound | Where-Object { $_ -ne "-ni" -and $_ -ne "-NoInteractive" })
+    }
     
-    if ([string]::IsNullOrWhiteSpace($Command)) { $Command = "help" }
+    $parsed = _pw_parse_args -Command $Command -Query $Query -Unbound $_pw_unbound
+    $Command = $parsed.Command
+    $Query = $parsed.Query
 
     $managers = _pw_detect_managers
+    $targetManagers = _pw_filter_manager $managers $Manager
+
     if (-not $NoHeader) { _pw_header $managers }
     if (-not (_pw_assert_managers $managers)) { return }
 
-    $targetManagers = _pw_filter_manager $managers $Manager
     if (-not $targetManagers) { return }
 
     # Global Admin check for choco/winget operations
-    if (-not (_pw_is_admin)) {
-        if ($Manager -eq "choco" -or ($null -eq $Manager -and $managers["choco"])) {
-            if ($Command -match "^(install|uninstall|update|upgrade|import|pin|unpin|hold|unhold)") {
-                _pw_color "  [!] Warning: You are running as a standard user." Yellow
-                _pw_color "      Chocolatey (choco) usually requires Administrator privileges to perform this action." Yellow
-                _pw_color ""
-            }
-        }
-    }
+    _pw_check_admin_requirements -managers $managers -Manager $Manager -Command $Command
 
     if ($Query) {
         $Query = _pw_sanitize $Query
@@ -461,8 +602,20 @@ function pacwin {
         "^(search|-Ss)$" {
             if (-not $Query) { _pw_color "  [!] Search term missing." Yellow; return }
             _pw_color "  > Searching for '$Query'..." Cyan
-            $results = _pw_search_all $targetManagers $Query $Limit $Timeout
+            $results = @(_pw_search_all $targetManagers $Query $Limit $Timeout)
             _pw_render_results $results $Query
+
+            if (-not $NoInteractive -and $results.Count -gt 0) {
+                _pw_color ""
+                $choice = Read-Host "  Install # (Enter to cancel)"
+                if ([string]::IsNullOrWhiteSpace($choice)) { return }
+                $idx = 0
+                if (-not [int]::TryParse($choice, [ref]$idx) -or $idx -lt 1 -or $idx -gt $results.Count) {
+                    _pw_color "  Invalid selection." Red; return
+                }
+                $pkg = $results[$idx - 1]
+                _pw_do_install $pkg
+            }
         }
 
         "^(info|-Si)$" {
@@ -495,39 +648,7 @@ function pacwin {
         }
 
         "^(update|upgrade|-Syu)$" {
-            if ($Query) {
-                _pw_color "  Looking for update candidates for '$Query'..." Cyan
-                if ($Manager) {
-                    _pw_do_update_single $Query $Manager
-                }
-                else {
-                    # Try to find which manager has it
-                    _pw_color "  Searching in outdated packages..." Gray
-                    $outdated = _pw_do_outdated $targetManagers -Silent
-                    $targetMatches = @($outdated | Where-Object { $_.ID -eq $Query -or $_.Name -eq $Query })
-
-                    if ($targetMatches.Count -eq 0) {
-                        _pw_color "  No outdated package found matching '$Query'. Trying direct update..." Gray
-                        # Fallback: Try all target managers
-                        foreach ($m in $targetManagers.Keys) {
-                            _pw_do_update_single $Query $m
-                        }
-                    }
-                    elseif ($targetMatches.Count -eq 1) {
-                        _pw_do_update_single $targetMatches[0].ID $targetMatches[0].Manager
-                    }
-                    else {
-                        _pw_color "  Multiple managers have updates for '$Query':" Yellow
-                        $pkg = _pw_pick_source $targetMatches
-                        if ($pkg) { 
-                            _pw_do_update_single $pkg.ID $pkg.Manager 
-                        }
-                    }
-                }
-            }
-            else {
-                _pw_do_update_all $targetManagers
-            }
+            _pw_handle_update -targetManagers $targetManagers -Query $Query -Manager $Manager
         }
 
         "^(outdated|-Qu)$" {
@@ -576,10 +697,16 @@ function pacwin {
 
         "^(status)$" {
             _pw_color "  Binary Paths:" Cyan
-            $managers.Keys | ForEach-Object {
-                _pw_color "  * $_ " Gray -NoNewline
-                _pw_color "-> $($managers[$_])" DarkGray
+            foreach ($key in $managers.Keys) {
+                _pw_color "  * $key " Gray -NoNewline
+                _pw_color "-> $($managers[$key])" DarkGray
             }
+        }
+
+        "^(version|-V|--version)$" {
+            _pw_color "  pacwin v0.2.7" Cyan
+            _pw_color "  PowerShell $($PSVersionTable.PSVersion)" Gray
+            return
         }
 
         "^(self-update)$" {
@@ -587,33 +714,12 @@ function pacwin {
         }
 
         "^(help|--help|-h)$" {
-            _pw_color "  Core Commands" Cyan
-            _pw_color "    search <q>        Find packages in all managers (-Ss)" White
-            _pw_color "    install <id>      Search and install a package (-S)" White
-            _pw_color "    uninstall <id>    Remove a package from the system (-R)" White
-            _pw_color ""
-            _pw_color "  Maintenance" Cyan
-            _pw_color "    update [id]       Upgrade one or all packages (-Syu)" White
-            _pw_color "    outdated          Show packages with newer versions (-Qu)" White
-            _pw_color "    doctor            Check environment health" White
-            _pw_color ""
-            _pw_color "  Management" Cyan
-            _pw_color "    list [filter]     Show installed packages (-Q)" White
-            _pw_color "    hold [id]         Pin/unpin versions (prevents updates)" White
-            _pw_color "    sync              Detect and fix duplicate installs" White
-            _pw_color ""
-            _pw_color "  System" Cyan
-            _pw_color "    status            Show manager paths" White
-            _pw_color "    self-update       Update pacwin script to latest" White
-            _pw_color "    help              Show this menu" White
-            _pw_color ""
-            _pw_color "  Example:" Gray
-            _pw_color "    pacwin search nodejs" White
+            _pw_show_help
         }
 
         "^(version|--version|-v)$" {
             _pw_color "  pacwin" White -NoNewline
-            _pw_color " v0.2.5" Gray
+            _pw_color " v0.2.7" Gray
         }
 
         Default {
@@ -912,7 +1018,7 @@ function _pw_do_doctor {
     # Connectivity check
     _pw_color "" 
     _pw_color "  Connectivity:" DarkGray
-    $hosts = @("winget.azureedge.net","community.chocolatey.org","github.com")
+    $hosts = @("api.github.com","community.chocolatey.org","github.com")
     foreach ($h in $hosts) {
         $ok = Test-Connection -ComputerName $h -Count 1 -Quiet -ErrorAction SilentlyContinue
         _pw_color ("  {0,-32} : {1}" -f $h, $(if ($ok) { "OK" } else { "UNREACHABLE" })) $(if ($ok) { "Green" } else { "Red" })
@@ -1030,7 +1136,11 @@ function _pw_do_sync {
 
     if ($managers["winget"]) {
         $raw = winget list --accept-source-agreements 2>$null
+<<<<<<< HEAD
         $lines = foreach ($r in $raw) { "$r" }
+=======
+        $lines = [System.Collections.Generic.List[string]]::new($raw.Count); foreach ($r in $raw) { $lines.Add([string]$r) }
+>>>>>>> origin/main
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $installed.Add($p) }
     }
@@ -1148,22 +1258,47 @@ function _pw_do_update_all {
         [Parameter(Mandatory=$true)]
         $managers
     )
+
+    _pw_color "  :: Synchronizing package databases..." Cyan
+    if ($managers["scoop"]) {
+        _pw_color "  Updating scoop database..." Gray
+        & $managers["scoop"] update | Out-Null
+    }
+
+    _pw_color "  :: Searching for outdated packages..." Cyan
+    $outdated = _pw_do_outdated $managers -Silent
+    if ($outdated.Count -eq 0) {
+        _pw_color "  [OK] All packages are up to date." Green
+        return
+    }
+
+    _pw_color "  Packages to upgrade ($($outdated.Count) total):" Yellow
+    _pw_render_results $outdated
+
+    _pw_color ""
+    $confirmation = Read-Host "  :: Proceed with installation? [Y/n]"
+    if ($confirmation -ne "" -and $confirmation -notmatch "^(y|Y)$") {
+        _pw_color "  Aborted." Yellow
+        return
+    }
+
+    _pw_color "  :: Starting full system upgrade..." Cyan
     if ($managers["winget"]) {
         _pw_color "  -- winget -----------------------------" Cyan
         if ($PSCmdlet.ShouldProcess("winget upgrade --all")) {
-            winget upgrade --all --accept-package-agreements --accept-source-agreements
+            & $managers["winget"] upgrade --all --accept-package-agreements --accept-source-agreements
         }
     }
     if ($managers["choco"]) {
         _pw_color "  -- chocolatey -------------------------" Yellow
         if ($PSCmdlet.ShouldProcess("choco upgrade all")) {
-            choco upgrade all -y
+            & $managers["choco"] upgrade all -y
         }
     }
     if ($managers["scoop"]) {
         _pw_color "  -- scoop ------------------------------" Green
         if ($PSCmdlet.ShouldProcess("scoop update *")) {
-            scoop update *
+            & $managers["scoop"] update *
         }
     }
 }
@@ -1176,7 +1311,11 @@ function _pw_do_outdated {
     if ($managers["winget"]) {
         if (-not $Silent) { _pw_color "  -- winget -----------------------------" Cyan }
         $out = winget upgrade --accept-source-agreements 2>$null
+<<<<<<< HEAD
         $lines = foreach ($r in $out) { "$r" }
+=======
+        $lines = [System.Collections.Generic.List[string]]::new($out.Count); foreach ($o in $out) { $lines.Add([string]$o) }
+>>>>>>> origin/main
         $parsed = _pw_parse_winget_lines $lines
         foreach ($p in $parsed) { $allResults.Add($p) }
     }
@@ -1250,6 +1389,26 @@ function _pw_do_info {
     }
 }
 
+$script:ErrorCodes = @{
+    "winget" = @{
+        "0"           = "Success"
+        "-1978335186" = "Success (Restart required to complete)"
+        "-1978335215" = "Network or Source Error (Check connectivity)"
+        "-1978334812" = "Installer failed with exit code"
+    }
+    "choco" = @{
+        "0"    = "Success"
+        "1641" = "Success (Restart required to complete)"
+        "3010" = "Success (Restart required to complete)"
+        "1603" = "Fatal error during installation (Try running as Administrator)"
+        "-1"   = "General error (Check logs)"
+    }
+    "scoop" = @{
+        "0" = "Success"
+        "1" = "Generic failure (Check bucket status or permissions)"
+    }
+}
+
 function _pw_handle_result {
     param(
         [string]$manager,
@@ -1263,16 +1422,22 @@ function _pw_handle_result {
 
     switch ($manager) {
         "winget" {
-            if ($exitCode -eq 0) { $success = $true }
-            elseif ($exitCode -eq -1978335186) { $msg = "Restart required to complete." }
-            else { $msg = "Winget Error (Code: $exitCode)." }
+            $codeStr = [string]$exitCode
+            if ($script:ErrorCodes["winget"].Contains($codeStr)) {
+                $msg = $script:ErrorCodes["winget"][$codeStr]
+                if ($exitCode -eq 0 -or $exitCode -eq -1978335186) { $success = $true }
+            } else {
+                $msg = "Winget Error (Code: $exitCode)."
+            }
         }
         "choco" {
-            if ($exitCode -eq 0 -or $exitCode -eq 1641 -or $exitCode -eq 3010) { 
-                $success = $true 
-                if ($exitCode -ne 0) { $msg = "Success (Restart required)." }
+            $codeStr = [string]$exitCode
+            if ($script:ErrorCodes["choco"].Contains($codeStr)) {
+                $msg = $script:ErrorCodes["choco"][$codeStr]
+                if ($exitCode -eq 0 -or $exitCode -eq 1641 -or $exitCode -eq 3010) { $success = $true }
+            } else {
+                $msg = "Chocolatey Error (Code: $exitCode)."
             }
-            else { $msg = "Chocolatey Error (Code: $exitCode)." }
         }
         "scoop" {
             if ($outputText -match "installed successfully|already installed") {
@@ -1283,6 +1448,10 @@ function _pw_handle_result {
                 $msg = "Scoop Error: " + ($output | Select-String "Error:" | Select-Object -First 1)
             }
             else {
+                $codeStr = [string]$exitCode
+                if ($script:ErrorCodes["scoop"].Contains($codeStr)) {
+                    $msg = $script:ErrorCodes["scoop"][$codeStr]
+                }
                 $success = ($exitCode -eq 0)
             }
         }
@@ -1328,23 +1497,33 @@ Register-ArgumentCompleter -CommandName pacwin -ParameterName Command -ScriptBlo
     $cmds = @(
         'search','install','uninstall','update','outdated','list',
         'info','pin','unpin','export','import','doctor','status','help',
-        'hold','unhold','check','sync','dupes','dedup','self-update'
+        'hold','unhold','check','sync','dupes','dedup','self-update','version',
+        '-S','-Ss','-Syu','-R','-Q','-Qu','-Si','-V','-h','--help','--version'
     )
-    $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+    foreach ($cmd in $cmds.Where({ $_ -like "$wordToComplete*" })) {
         [System.Management.Automation.CompletionResult]::new(
-            $_,                                      # completionText
-            $_,                                      # listItemText
+            $cmd,                                      # completionText
+            $cmd,                                      # listItemText
             [System.Management.Automation.CompletionResultType]::ParameterValue,
-            $_                                       # toolTip
+            $cmd                                       # toolTip
         )
     }
 }
 
 Register-ArgumentCompleter -CommandName pacwin -ParameterName Manager -ScriptBlock {
     param($commandName, $parameterName, $wordToComplete)
-    @('winget','choco','scoop') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
-        [System.Management.Automation.CompletionResult]::new($_, $_, 
-            [System.Management.Automation.CompletionResultType]::ParameterValue, $_)
+    foreach ($mgr in @('winget','choco','scoop').Where({ $_ -like "$wordToComplete*" })) {
+        [System.Management.Automation.CompletionResult]::new($mgr, $mgr,
+            [System.Management.Automation.CompletionResultType]::ParameterValue, $mgr)
+    }
+}
+
+# Tab completion for -NoInteractive flag
+Register-ArgumentCompleter -CommandName pacwin -ParameterName NoInteractive -ScriptBlock {
+    param($commandName, $parameterName, $wordToComplete)
+    foreach ($opt in @('$true','$false','-ni','-NoInteractive').Where({ $_ -like "$wordToComplete*" })) {
+        [System.Management.Automation.CompletionResult]::new($opt, $opt,
+            [System.Management.Automation.CompletionResultType]::ParameterValue, $opt)
     }
 }
 
