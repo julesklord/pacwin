@@ -221,4 +221,25 @@ Describe "pacwin core logic" {
             }
         }
     }
+    Context "Search Engine Error Handling" {
+        It "Handles missing executables gracefully" {
+            InModuleScope pacwin {
+                $managers = @{
+                    winget = "nonexistent-winget-exe"
+                    choco = "nonexistent-choco-exe"
+                    scoop = "nonexistent-scoop-exe"
+                }
+
+                # Because _pw_search_all suppresses output and errors in runspaces, we
+                # ensure it doesn't throw and returns an empty array.
+                { _pw_search_all -managers $managers -query "test" -timeoutSeconds 2 } | Should -Not -Throw
+
+                # Check result directly as Should -Not -Throw consumes it in Pester sometimes
+                $res = _pw_search_all -managers $managers -query "test" -timeoutSeconds 2
+
+                # Ensure the result is an array or list and has count 0
+                @($res).Count | Should -Be 0
+            }
+        }
+    }
 }
