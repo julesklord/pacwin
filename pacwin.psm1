@@ -505,36 +505,38 @@ function _pw_handle_update {
         [string]$Manager
     )
 
-    if ($Query) {
-        _pw_color "  Looking for update candidates for '$Query'..." Cyan
-        if ($Manager) {
-            _pw_do_update_single $Query $Manager
-        }
-        else {
-            _pw_color "  Searching in outdated packages..." Gray
-            $outdated = _pw_do_outdated $targetManagers -Silent
-            $targetMatches = @($outdated | Where-Object { $_.ID -eq $Query -or $_.Name -eq $Query })
-
-            if ($targetMatches.Count -eq 0) {
-                _pw_color "  No outdated package found matching '$Query'. Trying direct update..." Gray
-                foreach ($m in $targetManagers.Keys) {
-                    _pw_do_update_single $Query $m
-                }
-            }
-            elseif ($targetMatches.Count -eq 1) {
-                _pw_do_update_single $targetMatches[0].ID $targetMatches[0].Manager
-            }
-            else {
-                _pw_color "  Multiple managers have updates for '$Query':" Yellow
-                $pkg = _pw_pick_source $targetMatches
-                if ($pkg) {
-                    _pw_do_update_single $pkg.ID $pkg.Manager
-                }
-            }
-        }
-    }
-    else {
+    if (-not $Query) {
         _pw_do_update_all $targetManagers
+        return
+    }
+
+    _pw_color "  Looking for update candidates for '$Query'..." Cyan
+    if ($Manager) {
+        _pw_do_update_single $Query $Manager
+        return
+    }
+
+    _pw_color "  Searching in outdated packages..." Gray
+    $outdated = _pw_do_outdated $targetManagers -Silent
+    $targetMatches = @(@($outdated).Where({ $_.ID -eq $Query -or $_.Name -eq $Query }))
+
+    if ($targetMatches.Count -eq 0) {
+        _pw_color "  No outdated package found matching '$Query'. Trying direct update..." Gray
+        foreach ($m in $targetManagers.Keys) {
+            _pw_do_update_single $Query $m
+        }
+        return
+    }
+
+    if ($targetMatches.Count -eq 1) {
+        _pw_do_update_single $targetMatches[0].ID $targetMatches[0].Manager
+        return
+    }
+
+    _pw_color "  Multiple managers have updates for '$Query':" Yellow
+    $pkg = _pw_pick_source $targetMatches
+    if ($pkg) {
+        _pw_do_update_single $pkg.ID $pkg.Manager
     }
 }
 
