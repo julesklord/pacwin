@@ -120,6 +120,23 @@ Describe "pacwin core logic" {
         }
     }
 
+
+        It "Strips shell injection operators and characters" {
+            InModuleScope pacwin {
+                _pw_sanitize "package&rm -rf /" | Should -Be "packagerm-rf"
+                _pw_sanitize "package|Out-Null" | Should -Be "packageOut-Null"
+                _pw_sanitize "package>out.txt" | Should -Be "packageout.txt"
+                _pw_sanitize "package<in.txt" | Should -Be "packagein.txt"
+            }
+        }
+
+        It "Preserves Unicode word characters" {
+            InModuleScope pacwin {
+                _pw_sanitize "café.latte" | Should -Be "café.latte"
+                _pw_sanitize "über_cool" | Should -Be "über_cool"
+                _pw_sanitize "日本語" | Should -Be "日本語"
+            }
+        }
     Context "Command Dispatcher" {
         It "Recognizes new commands like 'hold' or 'sync'" {
             Mock -ModuleName pacwin _pw_do_pin { param($id, $mgr, $Unpin) }
