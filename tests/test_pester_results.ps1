@@ -285,11 +285,9 @@ function _pw_parse_scoop_lines
 
 #region ── Search Engine — Jobs con exePath explícito ────────
 
-function _pw_search_all
+function _pw_get_search_jobs
 {
-    param($managers, [string]$query, [int]$limit = 40)
-
-    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+    param($managers, $query)
     $jobs = @{}
 
     if ($managers["winget"])
@@ -328,6 +326,12 @@ function _pw_search_all
             }
         } -ArgumentList $exe, $query
     }
+    return $jobs
+}
+
+function _pw_wait_and_collect_search_jobs
+{
+    param($jobs, $results)
 
     foreach ($key in $jobs.Keys)
     {
@@ -368,6 +372,17 @@ function _pw_search_all
         }
         Remove-Job $job -Force
     }
+}
+
+function _pw_search_all
+{
+    param($managers, [string]$query, [int]$limit = 40)
+
+    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    $jobs = _pw_get_search_jobs -managers $managers -query $query
+
+    _pw_wait_and_collect_search_jobs -jobs $jobs -results $results
 
     if ($results.Count -gt $limit)
     { return $results | Select-Object -First $limit 
