@@ -387,14 +387,10 @@ function _pw_parse_scoop_lines
 
 #region -- Search Engine ------------------------------------
 
-function _pw_search_all
+function _pw_get_search_scripts
 {
-    param($managers, [string]$query, [int]$limit = 40, [int]$timeoutSeconds = 25)
-
-    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+    param($managers)
     $scripts = [ordered]@{}
-    $timeoutMs = $timeoutSeconds * 1000
-    $waitLimit = [int]($timeoutMs / 100)
 
     if ($managers["winget"])
     {
@@ -439,19 +435,12 @@ function _pw_search_all
             }
         }
     }
+    return $scripts
+}
 
-    # Unified concurrency approach for all PS versions
-    # This allows us to control the UI (spinner) while waiting for background tasks
-    $rsPool = [runspacefactory]::CreateRunspacePool(1, $scripts.Count)
-    $rsPool.Open()
-    $tasks = New-Object System.Collections.Generic.List[Object]
-
-    foreach ($key in $scripts.Keys)
-    {
-        $ps = [powershell]::Create().AddScript($scripts[$key]).AddArgument($managers[$key]).AddArgument($query)
-        $ps.RunspacePool = $rsPool
-        $tasks.Add(@{ Key = $key; PowerShell = $ps; AsyncResult = $ps.BeginInvoke(); Finished = $false })
-    }
+function _pw_wait_search_tasks
+{
+    param($tasks, [int]$timeoutSeconds)
 
     $spinner = "|/-\"
     $spinIdx = 0
@@ -498,8 +487,12 @@ function _pw_search_all
         $spinIdx++
     }
     Write-Host "" # End the spinner line
+}
 
-    # Collect and parse results
+function _pw_collect_search_results
+{
+    param($tasks, $results)
+
     foreach ($t in $tasks)
     {
         try
@@ -535,6 +528,34 @@ function _pw_search_all
             $t.PowerShell.Dispose()
         }
     }
+}
+
+function _pw_search_all
+{
+    param($managers, [string]$query, [int]$limit = 40, [int]$timeoutSeconds = 25)
+
+    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    $scripts = _pw_get_search_scripts -managers $managers
+
+    # Unified concurrency approach for all PS versions
+    # This allows us to control the UI (spinner) while waiting for background tasks
+    $rsPool = [runspacefactory]::CreateRunspacePool(1, $scripts.Count)
+    $rsPool.Open()
+    $tasks = New-Object System.Collections.Generic.List[Object]
+
+    foreach ($key in $scripts.Keys)
+    {
+        $ps = [powershell]::Create().AddScript($scripts[$key]).AddArgument($managers[$key]).AddArgument($query)
+        $ps.RunspacePool = $rsPool
+        $tasks.Add(@{ Key = $key; PowerShell = $ps; AsyncResult = $ps.BeginInvoke(); Finished = $false })
+    }
+
+    _pw_wait_search_tasks -tasks $tasks -timeoutSeconds $timeoutSeconds
+
+    # Collect and parse results
+    _pw_collect_search_results -tasks $tasks -results $results
+
     $rsPool.Close()
 
     if ($results.Count -gt $limit)
