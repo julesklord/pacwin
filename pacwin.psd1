@@ -13,7 +13,7 @@ RootModule = 'pacwin.psm1'
 
 
 # Version number of this module.
-ModuleVersion = '0.3.1'
+ModuleVersion = '0.4.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -108,7 +108,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'v0.3.1: Fixed Scoop detection interference caused by sfsu hook and other alias wrappers.'
+        ReleaseNotes = 'v0.4.0: TropicalDev Rebrand - High-impact industrial CLI aesthetic, standardized documentation, and deep repository cleanup.'
 
         # Prerelease string of this module
         # Prerelease = ''

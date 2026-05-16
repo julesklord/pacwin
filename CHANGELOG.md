@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-05-12
+Added
+TropicalDev Identity: Official handover to TropicalDev brand with full CLI aesthetic overhaul.
+New Command Station Banner: High-impact block-character ASCII art header with industrial telemetry.
+Pitahaya Industrial Style: Adopted TropicalUI Pitahaya preset for high-energy terminal feedback.
+Changed
+CLI Aesthetic Refactor: Standardized all prompts, tables, and status bars to follow Industrial TUI standards.
+Standardized Documentation: Full README.md refactor following the jules_dev_standard template.
+Repository Sanitization: Deep cleanup of redundant metadata, IDE artifacts, and temporary development files.
+Fixed
+Scoop Detection (sfsu): Resolved interference with sfsu hooks by bypassing PowerShell functions in executable discovery.
+
 ## [0.3.1] - 2026-05-12
 Fixed
 Scoop Detection: Bypassed `sfsu` PowerShell hooks and other alias wrappers in `_pw_exe` to ensure Scoop is reliably detected when using third-party search optimizers.

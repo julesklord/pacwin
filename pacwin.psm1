@@ -2,7 +2,7 @@
 #  pacwin.psm1  -  Universal Package Layer for Windows
 #  Abstraction over: winget | chocolatey | scoop
 #  Compatible: PowerShell 5.1 + PowerShell 7+
-#  v0.3.1 (TropicalUI Rebrand)
+#  v0.4.0 (TropicalDev Industrial Rebrand)
 # ============================================================
 
 Set-StrictMode -Version 2.0
@@ -80,7 +80,7 @@ function _pw_header
     _pw_color "  ██║     ██║  ██║╚██████╗╚███╔███╔╝██║██║ ╚████║" Cyan
     _pw_color "  ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝" Cyan
     _pw_color ""
-    _pw_color "  [ pacwin.ps1 ] // Powered by: Tropical // BUILD: STABLE" DarkGray
+    _pw_color "  [ pacwin.ps1 ] // Powered by: TropicalDev // Build: STABLE" DarkGray
     _pw_color ""
 
     if ($null -ne $managers)    {
@@ -102,7 +102,7 @@ function _pw_header
             if ($i -lt $keys.Count - 1) { _pw_color " " -NoNewline }
         }
         _pw_color "  //  " DarkGray -NoNewline
-        _pw_color "v0.3.1" White -NoNewline
+        _pw_color "v0.4.0" White -NoNewline
         _pw_color "  //  " DarkGray -NoNewline
         _pw_color "ENV: WINDOWS_X64" DarkGray
     }
@@ -930,7 +930,7 @@ function pacwin
 
         "^(version|-V|--version)$"
         {
-            _pw_color "  pacwin v0.3.1" Cyan
+            _pw_color "  pacwin v0.4.0" Cyan
             _pw_color "  PowerShell $($PSVersionTable.PSVersion)" Gray
             return
         }
@@ -948,7 +948,7 @@ function pacwin
         "^(version|--version|-v)$"
         {
             _pw_color "  pacwin" White -NoNewline
-            _pw_color " v0.3.1" Gray
+            _pw_color " v0.4.0" Gray
         }
 
         Default

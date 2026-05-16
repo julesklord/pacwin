@@ -30,7 +30,7 @@
   - [Overview](#overview)
   - [Using as a CLI Tool](#using-as-a-cli-tool)
   - [Installation](#installation)
-  - [Key Features (v0.3.1)](#key-features)
+  - [Key Features (v0.4.0)](#key-features)
   - [Technical Architecture](#technical-architecture)
   - [Core Lifecycle](#core-lifecycle)
   - [Command Reference](#command-reference)
@@ -96,7 +96,7 @@ cd pacwin
 
 ---
 
-## Key Features (v0.3.1)
+## Key Features (v0.4.0)
 
 *   **Multi-Manager Search**: Concurrent scanning of Winget, Chocolatey, and Scoop.
 *   **Intelligent Selection**: Yaourt-style interactive prompts for numbered package selection.
@@ -203,7 +203,7 @@ For a comprehensive breakdown, see the **[Wiki](https://github.com/julesklord/pa
 | **v0.1.0** | ✅ | First hybrid search engine release. |
 | **v0.2.0** | ✅ | Export/Import and Tab Completion. |
 | **v0.3.0** | ✅ | Major performance refactor & test coverage. |
-| **v0.3.1** | ✅ | Fixed Scoop detection (sfsu hook support). |
+| **v0.4.0** | ✅ | Fixed Scoop detection (sfsu hook support). |
 | **v0.4.0** | ⏳ | UI Rebrand & Enhanced Telemetry. |
 
 ---
