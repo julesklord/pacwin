@@ -73,36 +73,39 @@ function _pw_header
     param($managers)
 
     _pw_color ""
-    _pw_color "  ██████╗  █████╗  ██████╗██╗    ██╗██╗███╗   ██╗" Cyan
-    _pw_color "  ██╔══██╗██╔══██╗██╔════╝██║    ██║██║████╗  ██║" Cyan
-    _pw_color "  ██████╔╝███████║██║     ██║ █╗ ██║██║██╔██╗ ██║" Cyan
-    _pw_color "  ██╔═══╝ ██╔══██║██║     ██║███╗██║██║██║╚██╗██║" Cyan
-    _pw_color "  ██║     ██║  ██║╚██████╗╚███╔███╔╝██║██║ ╚████║" Cyan
-    _pw_color "  ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝" Cyan
+    _pw_color "  ██████╗  █████╗  ██████╗██╗    ██╗██╗███╗   ██╗" Red
+    _pw_color "  ██╔══██╗██╔══██╗██╔════╝██║    ██║██║████╗  ██║" Red
+    _pw_color "  ██████╔╝███████║██║     ██║ █╗ ██║██║██╔██╗ ██║" Red
+    _pw_color "  ██╔═══╝ ██╔══██║██║     ██║███╗██║██║██║╚██╗██║" Red
+    _pw_color "  ██║     ██║  ██║╚██████╗╚███╔███╔╝██║██║ ╚████║" Red
+    _pw_color "  ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝" Red
     _pw_color ""
-    _pw_color "  [ pacwin.ps1 ] // Powered by: TropicalDev // Build: STABLE" DarkGray
+    _pw_color "  [ pacwin.ps1 ] // Powered by: Tropical // BUILD: STABLE" DarkGray
     _pw_color ""
 
-    if ($null -ne $managers)    {
-        # TUI_STATUS_BAR (DENSE)
+    if ($null -ne $managers)
+    {
+        # TUI_STATUS_BAR (PITAHAYA_DENSE)
         _pw_color "  " -NoNewline
         $keys = "winget", "choco", "scoop"
         for ($i = 0; $i -lt $keys.Count; $i++)
         {
             $k = $keys[$i]
-            $indicator = if ($managers[$k]) { "ON" } else { "OFF" }
+            $indicator = if ($managers[$k]) { "ONLINE" } else { "OFFLINE" }
             $color = if ($managers[$k]) { "Green" } else { "DarkGray" }
 
-            _pw_color "[" DarkGray -NoNewline
+            _pw_color "┌ " DarkGray -NoNewline
             _pw_color "$($k.ToUpper())" White -NoNewline
-            _pw_color ":" DarkGray -NoNewline
+            _pw_color " ┐" DarkGray -NoNewline
+            _pw_color "─" DarkGray -NoNewline
+            _pw_color "[" DarkGray -NoNewline
             _pw_color "$indicator" $color -NoNewline
             _pw_color "]" DarkGray -NoNewline
 
-            if ($i -lt $keys.Count - 1) { _pw_color " " -NoNewline }
+            if ($i -lt $keys.Count - 1) { _pw_color "  " -NoNewline }
         }
         _pw_color "  //  " DarkGray -NoNewline
-        _pw_color "v0.4.0" White -NoNewline
+        _pw_color "v0.4.0" Red -NoNewline
         _pw_color "  //  " DarkGray -NoNewline
         _pw_color "ENV: WINDOWS_X64" DarkGray
     }
@@ -119,7 +122,7 @@ function _pw_sep
     if ($w -lt 40)
     { $w = 68
     }
-    _pw_color ("  " + ("─" * $w)) DarkGray
+    _pw_color ("  " + ("━" * $w)) Red
 }
 
 function _pw_exe
