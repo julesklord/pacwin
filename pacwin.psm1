@@ -2,7 +2,7 @@
 #  pacwin.psm1  -  Universal Package Layer for Windows
 #  Abstraction over: winget | chocolatey | scoop
 #  Compatible: PowerShell 5.1 + PowerShell 7+
-#  v0.3.1 (Major Refactor & Optimizations)
+#  v0.3.1 (TropicalUI Rebrand)
 # ============================================================
 
 Set-StrictMode -Version 2.0
@@ -13,6 +13,14 @@ if ($PSVersionTable.PSVersion.Major -lt 6)
 {
     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 }
+
+# TROPICAL_UI :: BRAND_PITAHAYA (High-Energy industrial)
+# Primary: Red (ANSI) / #FF2400
+# Secondary: Green (ANSI) / #2E8B57
+# Success: Green
+# Warning: Yellow
+# Danger: Red
+# Dim: DarkGray
 
 #region -- Security & Validation -----------------------------
 
@@ -36,7 +44,7 @@ function _pw_validate_path
     {
         return $pathInput
     }
-    _pw_color "  [!] Path input detected as a potential security risk: '$pathInput'" Red
+    _pw_color "  [!] PATH_RISK: '$pathInput'" Red
     return $null
 }
 
@@ -63,38 +71,44 @@ function _pw_color
 function _pw_header
 {
     param($managers)
-    _pw_color ""
-    _pw_color "  >> " Cyan -NoNewline
-    _pw_color "pacwin" White -NoNewline
-    _pw_color " v0.3.1" DarkGray -NoNewline
-    _pw_color "  --  " DarkGray -NoNewline
-    _pw_color "universal package layer" DarkGray
 
-    if ($null -ne $managers)
-    {
-        _pw_color "  [" DarkGray -NoNewline
+    _pw_color ""
+    _pw_color "  ██████╗  █████╗  ██████╗██╗    ██╗██╗███╗   ██╗" Cyan
+    _pw_color "  ██╔══██╗██╔══██╗██╔════╝██║    ██║██║████╗  ██║" Cyan
+    _pw_color "  ██████╔╝███████║██║     ██║ █╗ ██║██║██╔██╗ ██║" Cyan
+    _pw_color "  ██╔═══╝ ██╔══██║██║     ██║███╗██║██║██║╚██╗██║" Cyan
+    _pw_color "  ██║     ██║  ██║╚██████╗╚███╔███╔╝██║██║ ╚████║" Cyan
+    _pw_color "  ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝" Cyan
+    _pw_color ""
+    _pw_color "  [ pacwin.ps1 ] // Powered by: Tropical // BUILD: STABLE" DarkGray
+    _pw_color ""
+
+    if ($null -ne $managers)    {
+        # TUI_STATUS_BAR (DENSE)
+        _pw_color "  " -NoNewline
         $keys = "winget", "choco", "scoop"
         for ($i = 0; $i -lt $keys.Count; $i++)
         {
             $k = $keys[$i]
-            _pw_color " $k " Gray -NoNewline
-            if ($managers[$k])
-            {
-                _pw_color "+" Green -NoNewline
-            } else
-            {
-                _pw_color "-" Red -NoNewline
-            }
-            if ($i -lt $keys.Count - 1)
-            { _pw_color " |" DarkGray -NoNewline
-            }
+            $indicator = if ($managers[$k]) { "ON" } else { "OFF" }
+            $color = if ($managers[$k]) { "Green" } else { "DarkGray" }
+
+            _pw_color "[" DarkGray -NoNewline
+            _pw_color "$($k.ToUpper())" White -NoNewline
+            _pw_color ":" DarkGray -NoNewline
+            _pw_color "$indicator" $color -NoNewline
+            _pw_color "]" DarkGray -NoNewline
+
+            if ($i -lt $keys.Count - 1) { _pw_color " " -NoNewline }
         }
-        _pw_color " ]" DarkGray
+        _pw_color "  //  " DarkGray -NoNewline
+        _pw_color "v0.3.1" White -NoNewline
+        _pw_color "  //  " DarkGray -NoNewline
+        _pw_color "ENV: WINDOWS_X64" DarkGray
     }
 
-    _pw_color ("  " + ("=" * 48)) DarkGray
+    _pw_sep
 }
-
 function _pw_sep
 {
     $w = try
@@ -105,7 +119,7 @@ function _pw_sep
     if ($w -lt 40)
     { $w = 68
     }
-    _pw_color ("  " + ("-" * $w)) DarkGray
+    _pw_color ("  " + ("─" * $w)) DarkGray
 }
 
 function _pw_exe
@@ -795,23 +809,24 @@ function pacwin
         "^(search|-Ss)$"
         {
             if (-not $Query)
-            { _pw_color "  [!] Search term missing." Yellow; return
+            { _pw_color "  [!] QUERY_MISSING: Specification required." Yellow; return
             }
-            _pw_color "  > Searching for '$Query'..." Cyan
+            _pw_color "  > SCANNING_REPOS: '$Query'..." Cyan
             $results = @(_pw_search_all $targetManagers $Query $Limit $Timeout)
             _pw_render_results $results $Query
 
             if (-not $NoInteractive -and $results.Count -gt 0)
             {
                 _pw_color ""
-                $choice = Read-Host "  Install # (Enter to cancel)"
+                _pw_color "  >> ENTRY_INDEX (ENTER TO CANCEL): " Cyan -NoNewline
+                $choice = Read-Host
                 if ([string]::IsNullOrWhiteSpace($choice))
                 { return
                 }
                 $idx = 0
                 if (-not [int]::TryParse($choice, [ref]$idx) -or $idx -lt 1 -or $idx -gt $results.Count)
                 {
-                    _pw_color "  Invalid selection." Red; return
+                    _pw_color "  [!] SELECTION_INVALID." Red; return
                 }
                 $pkg = $results[$idx - 1]
                 _pw_do_install $pkg
@@ -1038,10 +1053,10 @@ function _pw_render_results
     _pw_color ""
     if (-not $NoIndex)
     {
-        _pw_color ("  {0,-5} {1,-$($nameW-1)} {2,-$($idW-1)} {3,-$($verW-1)} {4}" -f "#", "Name", "ID", "Version", "Source") DarkGray
+        _pw_color ("  {0,-7} {1,-$($nameW-1)} {2,-$($idW-1)} {3,-$($verW-1)} {4}" -f "ENTRY", "NAME", "ID", "VERSION", "SOURCE") DarkGray
     } else
     {
-        _pw_color ("  {0,-$($nameW-1)} {1,-$($idW-1)} {2,-$($verW-1)} {3}" -f "Name", "ID", "Version", "Source") DarkGray
+        _pw_color ("  {0,-$($nameW-1)} {1,-$($idW-1)} {2,-$($verW-1)} {3}" -f "NAME", "ID", "VERSION", "SOURCE") DarkGray
     }
     _pw_sep
 
@@ -1059,7 +1074,11 @@ function _pw_render_results
 
         if (-not $NoIndex)
         {
-            _pw_color ("  [{0,-2}] " -f $i) DarkGray -NoNewline
+            # TropicalUI Row selection style
+            _pw_color "  " -NoNewline
+            _pw_color "│" DarkGray -NoNewline
+            _pw_color (" {0,2} " -f $i) Cyan -NoNewline
+            _pw_color "│ " DarkGray -NoNewline
         } else
         {
             _pw_color "  " DarkGray -NoNewline
@@ -2028,10 +2047,11 @@ function _pw_pick_source
     { return $arr[0]
     }
 
-    _pw_color "  Package available in multiple sources - pick one:" Yellow
+    _pw_color "  [PROMPT] Multiple candidates found. Specify target index:" Cyan
     _pw_render_results $arr
 
-    $choice = Read-Host "  Source index (Number, Enter=cancel)"
+    _pw_color "  >> ENTRY_INDEX (ENTER TO CANCEL): " Cyan -NoNewline
+    $choice = Read-Host
     if ([string]::IsNullOrWhiteSpace($choice))
     { return $null
     }
