@@ -20,7 +20,7 @@
 ---
 
 <p align="center">
-  <img src="docs/demo.gif" alt="pacwin in action" width="900" />
+  <img src="docs/screenshot.png" alt="pacwin rebranding" width="900" />
 </p>
 
 ---
@@ -55,6 +55,10 @@ For end-users, pacwin ships with a **unified search engine**, cross-manager upda
 ## Using as a CLI Tool
 
 The CLI provides a straightforward interface to interact with your package managers using either verbose or `pacman`-style shorthand.
+
+<p align="center">
+  <img src="docs/demo.gif" alt="pacwin in action" width="700" />
+</p>
 
 Unlike standard wrappers, **pacwin is designed for speed**. If you are building a dev environment or orchestrating systems, you can drop `pacwin` directly into your workflow.
 
